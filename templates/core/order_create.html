@@ -1,0 +1,150 @@
+{% extends 'base.html' %}
+{% block title %}Новый заказ — Чисто.Тут{% endblock %}
+
+{% block content %}
+<div class="order-create">
+    <h1 class="page-title">Оформление заказа</h1>
+
+    <form method="post" class="order-form" id="order-form">
+        {% csrf_token %}
+
+        {% if form.non_field_errors %}
+            <ul class="form-errors">
+                {% for err in form.non_field_errors %}
+                    <li>{{ err }}</li>
+                {% endfor %}
+            </ul>
+        {% endif %}
+
+        <section class="form-section">
+            <h2>Клиент</h2>
+            <p class="section-desc">Найдите клиента по имени или телефону или добавьте нового.</p>
+
+            <div class="client-search-row">
+                <input type="text" id="client-search" class="form-input" placeholder="Поиск: имя или телефон..."
+                       autocomplete="off">
+                <div id="client-results" class="client-results"></div>
+            </div>
+            <input type="hidden" name="client_id" id="id_client_id" value="{{ form.client_id.value|default:'' }}">
+            <p id="selected-client" class="selected-client"></p>
+
+            <div id="new-client-fields" class="new-client-fields">
+                <div class="form-group">
+                    {{ form.new_client_name.label_tag }}
+                    {{ form.new_client_name }}
+                    {{ form.new_client_name.errors }}
+                </div>
+                <div class="form-group">
+                    {{ form.new_client_phone.label_tag }}
+                    {{ form.new_client_phone }}
+                    {{ form.new_client_phone.errors }}
+                </div>
+            </div>
+        </section>
+
+        <section class="form-section">
+            <h2>Услуги и параметры</h2>
+            <div class="form-group">
+                <label>Услуги</label>
+                {% for choice in form.services.field.queryset %}
+                    <label class="checkbox-label">
+                        <input type="checkbox" name="services" value="{{ choice.pk }}" class="service-checkbox">
+                        {{ choice.name }} — {{ choice.price }} ₽
+                    </label>
+                {% empty %}
+                    <p class="empty">Нет услуг в прайсе. Добавьте в <a href="/admin/core/service/">админке</a>.</p>
+                {% endfor %}
+                {{ form.services.errors }}
+            </div>
+            <div class="form-group">
+                <label>Множитель сложности</label>
+                <div class="complexity-row">
+                    <label class="radio-label"><input type="radio" name="complexity" value="1.0" checked> 1</label>
+                    <label class="radio-label"><input type="radio" name="complexity" value="1.3"> 1.3</label>
+                    <label class="radio-label"><input type="radio" name="complexity" value="1.5"> 1.5</label>
+                </div>
+            </div>
+            <div class="form-group">
+                {{ form.ready_by.label_tag }}
+                {{ form.ready_by }}
+                {{ form.ready_by.errors }}
+            </div>
+        </section>
+
+        <div class="form-actions">
+            <button type="submit" class="btn btn-primary">Оформить заказ</button>
+            <a href="{% url 'core:home' %}" class="btn btn-ghost">Отмена</a>
+        </div>
+    </form>
+</div>
+
+<script>
+(function() {
+    const searchInput = document.getElementById('client-search');
+    const resultsDiv = document.getElementById('client-results');
+    const clientIdInput = document.getElementById('id_client_id');
+    const selectedSpan = document.getElementById('selected-client');
+    const newClientFields = document.getElementById('new-client-fields');
+
+    let searchTimer = null;
+
+    function showResults(clients) {
+        if (!clients.length) {
+            resultsDiv.innerHTML = '<p class="no-results">Не найдено. Заполните поля ниже для нового клиента.</p>';
+            resultsDiv.classList.add('open');
+            return;
+        }
+        resultsDiv.innerHTML = clients.map(c => 
+            `<button type="button" class="client-option" data-id="${c.id}" data-name="${c.name}" data-phone="${c.phone}">${c.name} — ${c.phone}</button>`
+        ).join('');
+        resultsDiv.classList.add('open');
+    }
+
+    function hideResults() {
+        resultsDiv.classList.remove('open');
+        resultsDiv.innerHTML = '';
+    }
+
+    function selectClient(id, name, phone) {
+        clientIdInput.value = id;
+        selectedSpan.textContent = 'Выбран: ' + name + ' — ' + phone;
+        selectedSpan.style.display = 'block';
+        searchInput.value = '';
+        newClientFields.querySelector('input[name="new_client_name"]').value = '';
+        newClientFields.querySelector('input[name="new_client_phone"]').value = '';
+        hideResults();
+    }
+
+    function clearClient() {
+        clientIdInput.value = '';
+        selectedSpan.textContent = '';
+        selectedSpan.style.display = 'none';
+    }
+
+    searchInput.addEventListener('input', function() {
+        clearClient();
+        const q = this.value.trim();
+        if (q.length < 2) {
+            hideResults();
+            return;
+        }
+        clearTimeout(searchTimer);
+        searchTimer = setTimeout(function() {
+            fetch('{% url "core:api_client_search" %}?q=' + encodeURIComponent(q))
+                .then(r => r.json())
+                .then(data => showResults(data.clients));
+        }, 200);
+    });
+
+    resultsDiv.addEventListener('click', function(e) {
+        const btn = e.target.closest('.client-option');
+        if (!btn) return;
+        selectClient(btn.dataset.id, btn.dataset.name, btn.dataset.phone);
+    });
+
+    searchInput.addEventListener('blur', function() {
+        setTimeout(hideResults, 150);
+    });
+})();
+</script>
+{% endblock %}

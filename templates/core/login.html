@@ -1,0 +1,41 @@
+{% extends 'base.html' %}
+{% block title %}Вход — Чисто.Тут{% endblock %}
+
+{% block content %}
+<div class="auth-card">
+    <h1 class="auth-title">Вход в систему</h1>
+    <p class="auth-subtitle">Учётная запись сотрудника</p>
+
+    <form method="post" class="auth-form">
+        {% csrf_token %}
+        {% if form.non_field_errors %}
+            <ul class="form-errors">
+                {% for err in form.non_field_errors %}
+                    <li>{{ err }}</li>
+                {% endfor %}
+            </ul>
+        {% endif %}
+        <div class="form-group">
+            <label for="id_username">Логин</label>
+            <input type="text" name="username" id="id_username" class="form-input" required
+                   value="{{ form.username.value|default:'' }}" placeholder="Логин" autofocus>
+            {% if form.username.errors %}
+                <span class="field-error">{{ form.username.errors.0 }}</span>
+            {% endif %}
+        </div>
+        <div class="form-group">
+            <label for="id_password">Пароль</label>
+            <input type="password" name="password" id="id_password" class="form-input" required
+                   placeholder="Пароль">
+            {% if form.password.errors %}
+                <span class="field-error">{{ form.password.errors.0 }}</span>
+            {% endif %}
+        </div>
+        <button type="submit" class="btn btn-primary btn-block">Войти</button>
+    </form>
+
+    <p class="auth-footer">
+        Нет аккаунта? <a href="{% url 'core:register' %}">Зарегистрироваться</a>
+    </p>
+</div>
+{% endblock %}

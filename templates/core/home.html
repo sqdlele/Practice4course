@@ -1,0 +1,91 @@
+{% extends 'base.html' %}
+{% block title %}Главная — Чисто.Тут{% endblock %}
+
+{% block content %}
+<div class="dashboard">
+    <h1 class="page-title">Главный экран</h1>
+
+    <section class="counters">
+        <div class="counter-card counter-in-work">
+            <span class="counter-value">{{ in_work }}</span>
+            <span class="counter-label">В работе</span>
+        </div>
+        <div class="counter-card counter-ready">
+            <span class="counter-value">{{ ready_count }}</span>
+            <span class="counter-label">Готово к выдаче</span>
+        </div>
+    </section>
+
+    <section class="search-section">
+        <form method="get" action="{% url 'core:home' %}" class="search-form">
+            <input type="search" name="q" value="{{ search_query }}" class="search-input"
+                   placeholder="Поиск по ID заказа или номеру телефона">
+            <button type="submit" class="btn btn-primary">Найти</button>
+        </form>
+        <a href="{% url 'core:order_create' %}" class="btn btn-primary">Новый заказ</a>
+    </section>
+
+    {% if search_query %}
+    <section class="search-results">
+        <h2>Результаты поиска</h2>
+        {% if search_results %}
+            <table class="orders-table">
+                <thead>
+                    <tr>
+                        <th>№</th>
+                        <th>Клиент</th>
+                        <th>Телефон</th>
+                        <th>Статус</th>
+                        <th>Готовность</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for order in search_results %}
+                    <tr>
+                        <td>{{ order.pk }}</td>
+                        <td>{{ order.client.name }}</td>
+                        <td>{{ order.client.phone }}</td>
+                        <td><span class="status status-{{ order.status }}">{{ order.get_status_display }}</span></td>
+                        <td>{{ order.ready_by|default:"—" }}</td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        {% else %}
+            <p class="empty">Ничего не найдено.</p>
+        {% endif %}
+    </section>
+    {% endif %}
+
+    <section class="urgent-section">
+        <h2>Горящие заказы</h2>
+        <p class="section-desc">Готовность сегодня или просрочены</p>
+        {% if urgent_orders %}
+            <table class="orders-table">
+                <thead>
+                    <tr>
+                        <th>№</th>
+                        <th>Клиент</th>
+                        <th>Телефон</th>
+                        <th>Статус</th>
+                        <th>Готовность</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for order in urgent_orders %}
+                    <tr>
+                        <td>{{ order.pk }}</td>
+                        <td>{{ order.client.name }}</td>
+                        <td>{{ order.client.phone }}</td>
+                        <td><span class="status status-{{ order.status }}">{{ order.get_status_display }}</span></td>
+                        <td>{{ order.ready_by|default:"—" }}</td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        {% else %}
+            <p class="empty">Нет горящих заказов.</p>
+        {% endif %}
+    </section>
+</div>
+{% endblock %}
