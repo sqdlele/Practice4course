@@ -346,3 +346,8 @@ body {
 .checkbox-label, .radio-label { display: flex; align-items: center; gap: 0.5rem; margin-bottom: 0.5rem; font-weight: normal; cursor: pointer; }
 .complexity-row { display: flex; gap: 1rem; flex-wrap: wrap; }
 .form-actions { display: flex; gap: 0.75rem; margin-top: 1rem; }
+.svc-check-row { margin-bottom: 0.25rem; }
+.svc-clean-time { color: var(--text-muted); font-size: 0.82rem; }
+.svc-extra-fields { display: flex; gap: 1rem; flex-wrap: wrap; padding: 0.5rem 0 0.5rem 1.75rem; }
+.svc-extra-fields label { font-size: 0.85rem; display: flex; align-items: center; gap: 0.35rem; }
+.form-input-sm { width: 70px; padding: 0.35rem 0.5rem; font-size: 0.88rem; }

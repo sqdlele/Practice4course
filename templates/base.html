@@ -9,13 +9,15 @@
     <link href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;500;600;700&display=swap" rel="stylesheet">
     {% load static %}
     <link rel="stylesheet" href="{% static 'css/style.css' %}">
+    <link rel="stylesheet" href="{% static 'css/customer.css' %}">
 </head>
 <body>
     <header class="header">
-        <a href="{% url 'core:home' %}" class="logo">Чисто.Тут</a>
+        <a href="{% url 'core:home' %}" class="logo">Чисто.Тут <small>Сотрудник</small></a>
         <nav class="nav">
             {% if user.is_authenticated %}
-                <span class="user-name">{{ user.get_full_name|default:user.username }}</span>
+                <a href="{% url 'core:staff_chat_list' %}" class="btn btn-ghost">Чаты</a>
+                <span class="user-name">{{ user.get_full_name }}</span>
                 <form action="{% url 'core:logout' %}" method="post" class="logout-form">
                     {% csrf_token %}
                     <button type="submit" class="btn btn-ghost">Выйти</button>

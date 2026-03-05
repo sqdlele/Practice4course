@@ -1,0 +1,79 @@
+{% extends 'base.html' %}
+{% block title %}Чат: {{ room.user.get_full_name|default:room.user.username }} — Чисто.Тут{% endblock %}
+
+{% block content %}
+<div class="staff-chat">
+    <div class="staff-chat-header">
+        <a href="{% url 'core:staff_chat_list' %}" class="btn btn-ghost">&larr; Все чаты</a>
+        <h2>{{ room.user.get_full_name|default:room.user.username }}</h2>
+    </div>
+    <div id="chat-messages" class="staff-chat-body">
+        {% for msg in chat_messages %}
+        <div class="chat-msg {% if msg.is_staff_message %}chat-msg-staff{% else %}chat-msg-user{% endif %}">
+            <span class="chat-msg-text">{{ msg.text }}</span>
+            <span class="chat-msg-time">{{ msg.created_at|date:"H:i" }}</span>
+        </div>
+        {% endfor %}
+    </div>
+    <form id="chat-form" class="staff-chat-footer">
+        {% csrf_token %}
+        <input type="text" id="chat-input" class="form-input" placeholder="Ответить..." autocomplete="off">
+        <button type="submit" class="btn btn-primary">Отправить</button>
+    </form>
+</div>
+
+<script>
+(function() {
+    const body = document.getElementById('chat-messages');
+    const form = document.getElementById('chat-form');
+    const input = document.getElementById('chat-input');
+    const csrfToken = '{{ csrf_token }}';
+    const roomUrl = '{% url "core:staff_chat" room.pk %}';
+    let lastId = {{ chat_messages.last.pk|default:"0" }};
+
+    body.scrollTop = body.scrollHeight;
+
+    function addMessage(msg) {
+        const div = document.createElement('div');
+        div.className = 'chat-msg ' + (msg.is_staff ? 'chat-msg-staff' : 'chat-msg-user');
+        div.innerHTML = `<span class="chat-msg-text">${escapeHtml(msg.text)}</span><span class="chat-msg-time">${msg.time}</span>`;
+        body.appendChild(div);
+        body.scrollTop = body.scrollHeight;
+    }
+
+    function escapeHtml(t) {
+        const d = document.createElement('div');
+        d.textContent = t;
+        return d.innerHTML;
+    }
+
+    form.addEventListener('submit', function(e) {
+        e.preventDefault();
+        const text = input.value.trim();
+        if (!text) return;
+        input.value = '';
+        fetch(roomUrl, {
+            method: 'POST',
+            headers: {'Content-Type': 'application/json', 'X-CSRFToken': csrfToken},
+            body: JSON.stringify({text}),
+        }).then(r => r.json()).then(msg => {
+            addMessage(msg);
+            if (msg.id > lastId) lastId = msg.id;
+        });
+    });
+
+    setInterval(function() {
+        fetch(roomUrl + '?after=' + lastId, {
+            headers: {'X-Requested-With': 'XMLHttpRequest'}
+        })
+        .then(r => r.json())
+        .then(data => {
+            data.messages.forEach(m => {
+                addMessage(m);
+                if (m.id > lastId) lastId = m.id;
+            });
+        });
+    }, 3000);
+})();
+</script>
+{% endblock %}

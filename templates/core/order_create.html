@@ -46,23 +46,35 @@
             <h2>Услуги и параметры</h2>
             <div class="form-group">
                 <label>Услуги</label>
-                {% for choice in form.services.field.queryset %}
-                    <label class="checkbox-label">
-                        <input type="checkbox" name="services" value="{{ choice.pk }}" class="service-checkbox">
-                        {{ choice.name }} — {{ choice.price }} ₽
-                    </label>
+                {% for svc in services %}
+                    <div class="svc-check-row">
+                        <label class="checkbox-label">
+                            <input type="checkbox" name="services" value="{{ svc.pk }}" class="service-checkbox"
+                                   data-dims="{{ svc.has_dimensions|yesno:'1,0' }}" data-weight="{{ svc.has_weight|yesno:'1,0' }}">
+                            {{ svc.name }} — {{ svc.price_label }}
+                            <span class="svc-clean-time">({{ svc.cleaning_time }})</span>
+                        </label>
+                        <div class="svc-extra-fields" data-for="{{ svc.pk }}" style="display:none">
+                            <label>Сложность:
+                                <select name="complexity_{{ svc.pk }}" class="form-input form-input-sm">
+                                    <option value="1.0" selected>1</option>
+                                    <option value="1.3">1.3</option>
+                                    <option value="1.5">1.5</option>
+                                </select>
+                            </label>
+                            {% if svc.has_dimensions %}
+                            <label>Длина (м): <input type="number" name="length_{{ svc.pk }}" value="0" min="0" max="50" step="0.1" class="form-input form-input-sm"></label>
+                            <label>Ширина (м): <input type="number" name="width_{{ svc.pk }}" value="0" min="0" max="50" step="0.1" class="form-input form-input-sm"></label>
+                            {% endif %}
+                            {% if svc.has_weight %}
+                            <label>Вес (кг): <input type="number" name="weight_{{ svc.pk }}" value="0" min="0" max="100" step="0.1" class="form-input form-input-sm"></label>
+                            {% endif %}
+                        </div>
+                    </div>
                 {% empty %}
                     <p class="empty">Нет услуг в прайсе. Добавьте в <a href="/admin/core/service/">админке</a>.</p>
                 {% endfor %}
                 {{ form.services.errors }}
-            </div>
-            <div class="form-group">
-                <label>Множитель сложности</label>
-                <div class="complexity-row">
-                    <label class="radio-label"><input type="radio" name="complexity" value="1.0" checked> 1</label>
-                    <label class="radio-label"><input type="radio" name="complexity" value="1.3"> 1.3</label>
-                    <label class="radio-label"><input type="radio" name="complexity" value="1.5"> 1.5</label>
-                </div>
             </div>
             <div class="form-group">
                 {{ form.ready_by.label_tag }}
@@ -144,6 +156,15 @@
 
     searchInput.addEventListener('blur', function() {
         setTimeout(hideResults, 150);
+    });
+})();
+
+(function() {
+    document.querySelectorAll('.service-checkbox').forEach(function(cb) {
+        cb.addEventListener('change', function() {
+            const extras = document.querySelectorAll('.svc-extra-fields[data-for="' + cb.value + '"]');
+            extras.forEach(function(el) { el.style.display = cb.checked ? 'flex' : 'none'; });
+        });
     });
 })();
 </script>

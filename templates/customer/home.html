@@ -1,0 +1,266 @@
+{% extends 'customer/base.html' %}
+{% load static %}
+{% block title %}Чисто.Тут — Химчистка{% endblock %}
+
+{% block content %}
+<!-- Слайдер баннеров -->
+{% if banners %}
+<section class="hero-slider" id="hero-slider">
+    <div class="slider-track" id="slider-track">
+        {% for banner in banners %}
+        <div class="slide">
+            <img src="{{ banner.image.url }}" alt="{{ banner.title }}">
+            {% if banner.title %}
+            <div class="slide-overlay">
+                <h2>{{ banner.title }}</h2>
+                {% if banner.subtitle %}<p>{{ banner.subtitle }}</p>{% endif %}
+            </div>
+            {% endif %}
+        </div>
+        {% endfor %}
+    </div>
+    {% if banners|length > 1 %}
+    <button class="slider-btn slider-prev" id="slider-prev">&lsaquo;</button>
+    <button class="slider-btn slider-next" id="slider-next">&rsaquo;</button>
+    <div class="slider-dots" id="slider-dots">
+        {% for banner in banners %}
+        <span class="dot {% if forloop.first %}active{% endif %}" data-idx="{{ forloop.counter0 }}"></span>
+        {% endfor %}
+    </div>
+    {% endif %}
+</section>
+{% else %}
+<section class="hero-placeholder">
+    <h1>Добро пожаловать в <span class="accent">Чисто.Тут</span></h1>
+    <p class="hero-subtitle">Профессиональная химчистка с заботой о ваших вещах</p>
+</section>
+{% endif %}
+
+{% if not user.is_authenticated %}
+<div class="guest-cta">
+    <a href="{% url 'customer:login' %}" class="btn btn-primary btn-lg">Войти</a>
+    <a href="{% url 'customer:register' %}" class="btn btn-ghost btn-lg">Регистрация</a>
+</div>
+{% endif %}
+
+<!-- Популярные услуги -->
+<section class="section" id="services">
+    <h2 class="section-title">Популярные услуги</h2>
+    <div class="svc-list">
+        {% for service in services %}
+        <div class="svc-card" data-id="{{ service.pk }}" data-price="{{ service.price }}" data-unit="{{ service.price_unit }}" data-dims="{{ service.has_dimensions|yesno:'1,0' }}" data-name="{{ service.name }}">
+            <div class="svc-card-top">
+                <div class="svc-thumb">
+                    {% if service.image %}
+                    <img src="{{ service.image.url }}" alt="{{ service.name }}">
+                    {% else %}
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm-1 17.93c-3.95-.49-7-3.85-7-7.93 0-.62.08-1.21.21-1.79L9 15v1c0 1.1.9 2 2 2v1.93zm6.9-2.54c-.26-.81-1-1.39-1.9-1.39h-1v-3c0-.55-.45-1-1-1H8v-2h2c.55 0 1-.45 1-1V7h2c1.1 0 2-.9 2-2v-.41c2.93 1.19 5 4.06 5 7.41 0 2.08-.8 3.97-2.1 5.39z"/></svg>
+                    {% endif %}
+                </div>
+                <div class="svc-info">
+                    <h3 class="svc-name">{{ service.name }}</h3>
+                    <span class="svc-time">Срок чистки — {{ service.cleaning_time }}</span>
+                </div>
+            </div>
+            <div class="svc-card-bottom">
+                <span class="svc-price">{{ service.price_label }}</span>
+                <div class="svc-qty">
+                    <button type="button" class="svc-qty-btn svc-qty-minus" aria-label="Минус">&minus;</button>
+                    <span class="svc-qty-val">0</span>
+                    <button type="button" class="svc-qty-btn svc-qty-plus" aria-label="Плюс">+</button>
+                </div>
+            </div>
+            {% if service.has_dimensions %}
+            <div class="svc-dims" style="display:none">
+                <div class="svc-dim-row">
+                    <label>Длина, м:&nbsp;<input type="number" class="svc-dim-input svc-length" value="0" min="0" max="15" step="0.1"></label>
+                    <input type="range" class="svc-dim-range svc-length-range" min="0" max="15" step="0.1" value="0">
+                </div>
+                <div class="svc-dim-row">
+                    <label>Ширина, м:&nbsp;<input type="number" class="svc-dim-input svc-width" value="0" min="0" max="15" step="0.1"></label>
+                    <input type="range" class="svc-dim-range svc-width-range" min="0" max="15" step="0.1" value="0">
+                </div>
+                <div class="svc-dims-total">Итого: <strong class="svc-dims-sum">0 ₽</strong></div>
+            </div>
+            {% endif %}
+        </div>
+        {% empty %}
+        <p class="empty">Услуги скоро появятся.</p>
+        {% endfor %}
+    </div>
+</section>
+
+<!-- Категории услуг -->
+{% if categories %}
+<section class="section" id="categories">
+    <h2 class="section-title">Наши услуги</h2>
+    <div class="home-cats">
+        {% for cat in categories %}
+        <div class="home-cat-block">
+            <a href="{% url 'customer:category' cat.slug %}" class="home-cat-top">
+                <h3>{{ cat.name }}</h3>
+            </a>
+            <div class="home-cat-body">
+                {% if cat.image %}
+                <div class="home-cat-img">
+                    <img src="{{ cat.image.url }}" alt="{{ cat.name }}">
+                </div>
+                {% endif %}
+                <div class="home-cat-links">
+                    {% for svc in cat.services.all %}
+                    <a href="{% url 'customer:service_detail' cat.slug svc.pk %}">{{ svc.name }}</a>
+                    {% endfor %}
+                </div>
+            </div>
+        </div>
+        {% endfor %}
+    </div>
+</section>
+{% endif %}
+
+<!-- Яндекс Карта — на всю ширину -->
+<section class="map-fullwidth" id="map-section">
+    <h2 class="section-title">Где нас найти</h2>
+    <script src="https://api-maps.yandex.ru/2.1/?lang=ru_RU" type="text/javascript"></script>
+    <div id="yandex-map" style="width:100%;height:420px;"></div>
+    <script>
+        ymaps.ready(function(){
+            var map = new ymaps.Map('yandex-map', {
+                center: [56.834926, 53.234687],
+                zoom: 15,
+                controls: ['zoomControl']
+            });
+            map.geoObjects.add(new ymaps.Placemark([56.834926, 53.234687], {
+                balloonContent: 'Чисто.Тут — мы здесь!'
+            }, {
+                preset: 'islands#blueCleaningIcon'
+            }));
+        });
+    </script>
+</section>
+
+<!-- Отзывы -->
+{% if reviews %}
+<section class="section" id="reviews-section">
+    <h2 class="section-title">Отзывы наших клиентов</h2>
+    <div class="reviews-carousel" id="reviews-carousel">
+        <div class="reviews-track" id="reviews-track">
+            {% for review in reviews %}
+            <div class="review-card">
+                <div class="review-rating">
+                    {% for i in "12345" %}
+                        {% if forloop.counter <= review.rating %}
+                            <span class="star filled">★</span>
+                        {% else %}
+                            <span class="star">★</span>
+                        {% endif %}
+                    {% endfor %}
+                </div>
+                <p class="review-text">{{ review.text }}</p>
+                <span class="review-author">{{ review.author_name }}</span>
+            </div>
+            {% endfor %}
+        </div>
+        <button class="slider-btn reviews-prev" id="reviews-prev">&lsaquo;</button>
+        <button class="slider-btn reviews-next" id="reviews-next">&rsaquo;</button>
+    </div>
+</section>
+{% endif %}
+
+<script>
+/* Карточки услуг: количество + размеры + корзина */
+(function(){
+    document.querySelectorAll('.svc-card').forEach(function(card){
+        var id = parseInt(card.dataset.id);
+        var price = parseFloat(card.dataset.price);
+        var hasDims = card.dataset.dims === '1';
+        var valEl = card.querySelector('.svc-qty-val');
+        var dimsPanel = card.querySelector('.svc-dims');
+
+        function getQty() { return parseInt(valEl.textContent) || 0; }
+
+        function syncToCart() {
+            var qty = getQty();
+            if (qty === 0) { Cart.remove(id); return; }
+            var item = { service_id: id, qty: qty };
+            if (hasDims && dimsPanel) {
+                item.length = parseFloat(dimsPanel.querySelector('.svc-length').value) || 0;
+                item.width = parseFloat(dimsPanel.querySelector('.svc-width').value) || 0;
+            }
+            Cart.set(item);
+        }
+
+        function updateQty(n) {
+            var qty = Math.max(0, n);
+            valEl.textContent = qty;
+            if (hasDims && dimsPanel) {
+                dimsPanel.style.display = qty > 0 ? '' : 'none';
+                calcDimsTotal();
+            }
+            syncToCart();
+        }
+
+        card.querySelector('.svc-qty-minus').addEventListener('click', function(){ updateQty(getQty() - 1); });
+        card.querySelector('.svc-qty-plus').addEventListener('click', function(){ updateQty(getQty() + 1); });
+
+        if (hasDims && dimsPanel) {
+            var lenInput = dimsPanel.querySelector('.svc-length');
+            var lenRange = dimsPanel.querySelector('.svc-length-range');
+            var widInput = dimsPanel.querySelector('.svc-width');
+            var widRange = dimsPanel.querySelector('.svc-width-range');
+            var sumEl = dimsPanel.querySelector('.svc-dims-sum');
+
+            function calcDimsTotal() {
+                var l = parseFloat(lenInput.value) || 0;
+                var w = parseFloat(widInput.value) || 0;
+                var qty = getQty();
+                var total = Math.round(price * l * w * qty);
+                sumEl.textContent = total.toLocaleString('ru-RU') + ' ₽';
+            }
+
+            function syncPair(input, range) {
+                input.addEventListener('input', function(){ range.value = input.value; calcDimsTotal(); syncToCart(); });
+                range.addEventListener('input', function(){ input.value = range.value; calcDimsTotal(); syncToCart(); });
+            }
+            syncPair(lenInput, lenRange);
+            syncPair(widInput, widRange);
+        }
+
+        var existing = Cart.get(id);
+        if (existing) updateQty(existing.qty);
+    });
+})();
+
+/* Баннер-слайдер */
+(function(){
+    const track = document.getElementById('slider-track');
+    if (!track) return;
+    const slides = track.children;
+    if (slides.length < 2) return;
+    const prev = document.getElementById('slider-prev');
+    const next = document.getElementById('slider-next');
+    const dots = document.querySelectorAll('#slider-dots .dot');
+    let idx = 0;
+    function go(i) {
+        idx = (i + slides.length) % slides.length;
+        track.style.transform = 'translateX(-' + (idx * 100) + '%)';
+        dots.forEach((d, j) => d.classList.toggle('active', j === idx));
+    }
+    prev.addEventListener('click', () => go(idx - 1));
+    next.addEventListener('click', () => go(idx + 1));
+    dots.forEach(d => d.addEventListener('click', () => go(+d.dataset.idx)));
+    setInterval(() => go(idx + 1), 5000);
+})();
+
+/* Отзывы — горизонтальная прокрутка */
+(function(){
+    const track = document.getElementById('reviews-track');
+    if (!track) return;
+    const prev = document.getElementById('reviews-prev');
+    const next = document.getElementById('reviews-next');
+    const step = 320;
+    prev.addEventListener('click', () => track.scrollBy({left: -step, behavior: 'smooth'}));
+    next.addEventListener('click', () => track.scrollBy({left: step, behavior: 'smooth'}));
+})();
+</script>
+{% endblock %}

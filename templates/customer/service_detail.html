@@ -1,0 +1,120 @@
+{% extends 'customer/base.html' %}
+{% load static %}
+{% block title %}{{ service.name }} — Чисто.Тут{% endblock %}
+
+{% block content %}
+<nav class="breadcrumbs">
+    <a href="{% url 'customer:home' %}">Главная</a>
+    <span class="bc-sep">/</span>
+    <a href="{% url 'customer:category' category.slug %}">{{ category.name }}</a>
+    <span class="bc-sep">/</span>
+    <span>{{ service.name }}</span>
+</nav>
+
+<h1 class="sd-title">{{ service.name }}</h1>
+
+<div class="sd-layout">
+    <div class="sd-main">
+        {% if children %}
+        <h2 class="sd-subtitle">Стоимость услуг</h2>
+        <div class="sd-table">
+            <div class="sd-table-head">
+                <span class="sd-col-name">изделие</span>
+                <span class="sd-col-price">цена</span>
+                <span class="sd-col-action"></span>
+            </div>
+            {% for item in children %}
+            <div class="sd-table-row" data-id="{{ item.pk }}" data-price="{{ item.price }}" data-name="{{ item.name }}">
+                <span class="sd-col-name">{{ item.name }}</span>
+                <span class="sd-col-price">{{ item.price_label }}</span>
+                <button type="button" class="btn btn-primary sd-add-btn" data-id="{{ item.pk }}">Добавить</button>
+            </div>
+            {% endfor %}
+        </div>
+        {% else %}
+        <h2 class="sd-subtitle">Стоимость услуги</h2>
+        <div class="sd-table">
+            <div class="sd-table-head">
+                <span class="sd-col-name">изделие</span>
+                <span class="sd-col-price">цена</span>
+                <span class="sd-col-action"></span>
+            </div>
+            <div class="sd-table-row" data-id="{{ service.pk }}" data-price="{{ service.price }}" data-name="{{ service.name }}">
+                <span class="sd-col-name">{{ service.name }}</span>
+                <span class="sd-col-price">{{ service.price_label }}</span>
+                <button type="button" class="btn btn-primary sd-add-btn" data-id="{{ service.pk }}">Добавить</button>
+            </div>
+        </div>
+        {% endif %}
+    </div>
+
+    <aside class="sd-sidebar">
+        <div class="sd-calc">
+            <h3>Предварительный расчёт стоимости услуг</h3>
+            <div class="sd-calc-total">
+                <span class="sd-calc-label">Итого:</span>
+                <span class="sd-calc-sum" id="sd-total">0 ₽</span>
+            </div>
+            <div class="sd-calc-items" id="sd-calc-items"></div>
+            <p class="sd-calc-time">Срок исполнения: <strong>{{ service.cleaning_time }}</strong></p>
+            <a href="{% url 'customer:cart' %}" class="btn btn-primary sd-calc-cart-btn" id="sd-go-cart" style="display:none;">Перейти в корзину</a>
+        </div>
+    </aside>
+</div>
+
+<script>
+(function(){
+    var totalEl = document.getElementById('sd-total');
+    var calcItems = document.getElementById('sd-calc-items');
+    var goCartBtn = document.getElementById('sd-go-cart');
+
+    function updateCalc() {
+        var items = Cart.getAll();
+        var pageIds = [];
+        document.querySelectorAll('.sd-table-row').forEach(function(r){ pageIds.push(parseInt(r.dataset.id)); });
+
+        var sum = 0;
+        var html = '';
+        var hasAny = false;
+        items.forEach(function(ci) {
+            if (pageIds.indexOf(ci.service_id) === -1) return;
+            var row = document.querySelector('.sd-table-row[data-id="'+ci.service_id+'"]');
+            if (!row) return;
+            hasAny = true;
+            var price = parseFloat(row.dataset.price);
+            var lineTotal = price * ci.qty;
+            sum += lineTotal;
+            html += '<div class="sd-calc-line"><span>' + row.dataset.name + ' &times; ' + ci.qty + '</span><span>' + Math.round(lineTotal).toLocaleString('ru-RU') + ' ₽</span></div>';
+        });
+
+        totalEl.textContent = Math.round(sum).toLocaleString('ru-RU') + ' ₽';
+        calcItems.innerHTML = html;
+        goCartBtn.style.display = hasAny ? '' : 'none';
+
+        document.querySelectorAll('.sd-add-btn').forEach(function(btn){
+            var id = parseInt(btn.dataset.id);
+            var ci = Cart.get(id);
+            if (ci && ci.qty > 0) {
+                btn.textContent = 'В корзине (' + ci.qty + ')';
+                btn.classList.add('sd-btn-in-cart');
+            } else {
+                btn.textContent = 'Добавить';
+                btn.classList.remove('sd-btn-in-cart');
+            }
+        });
+    }
+
+    document.querySelectorAll('.sd-add-btn').forEach(function(btn){
+        btn.addEventListener('click', function(){
+            var id = parseInt(btn.dataset.id);
+            var existing = Cart.get(id);
+            var qty = existing ? existing.qty + 1 : 1;
+            Cart.set({ service_id: id, qty: qty });
+            updateCalc();
+        });
+    });
+
+    updateCalc();
+})();
+</script>
+{% endblock %}

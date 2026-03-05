@@ -1,3 +1,4 @@
+from decimal import Decimal
 from django.shortcuts import render, redirect
 from django.db.models import Q
 from django.contrib.auth.views import LoginView, LogoutView
@@ -10,7 +11,7 @@ from django.views.decorators.http import require_GET
 
 from .models import Order, Client, Service, OrderItem
 from .forms import RegisterForm, OrderCreateForm
-
+from customer.models import ChatRoom, ChatMessage
 
 from django.contrib.auth.forms import AuthenticationForm
 
@@ -104,8 +105,6 @@ def api_client_search(request):
 @login_required
 def order_create(request):
     """Оформление нового заказа: выбор или регистрация клиента + услуги."""
-    from decimal import Decimal
-
     default_ready = timezone.localdate() + timezone.timedelta(days=3)
     form = OrderCreateForm(
         request.POST or None,
@@ -118,16 +117,23 @@ def order_create(request):
 
         order = Order.objects.create(
             client=client,
-            complexity=form.cleaned_data['complexity'],
             discount_percent=discount,
             ready_by=form.cleaned_data['ready_by'],
         )
         for service in form.cleaned_data['services']:
+            length = Decimal(request.POST.get(f'length_{service.pk}', '0') or '0')
+            width = Decimal(request.POST.get(f'width_{service.pk}', '0') or '0')
+            weight = Decimal(request.POST.get(f'weight_{service.pk}', '0') or '0')
+            complexity = Decimal(request.POST.get(f'complexity_{service.pk}', '1.0') or '1.0')
             OrderItem.objects.create(
                 order=order,
                 service=service,
                 unit_price=service.price,
                 quantity=1,
+                length=length,
+                width=width,
+                weight=weight,
+                complexity=complexity,
             )
 
         from django.contrib import messages
@@ -137,4 +143,67 @@ def order_create(request):
     return render(request, 'core/order_create.html', {
         'form': form,
         'services': Service.objects.all(),
+    })
+
+
+@login_required
+def staff_chat_list(request):
+    """Список активных чатов для сотрудника."""
+    rooms = ChatRoom.objects.select_related('user').order_by('-created_at')
+    rooms_data = []
+    for room in rooms:
+        last_msg = room.messages.order_by('-created_at').first()
+        rooms_data.append({
+            'room': room,
+            'last_msg': last_msg,
+            'unread': room.unread_for_staff(),
+        })
+    return render(request, 'core/chat_list.html', {'rooms': rooms_data})
+
+
+@login_required
+def staff_chat(request, room_id):
+    """Чат с конкретным пользователем (для сотрудника)."""
+    import json
+    from django.http import JsonResponse
+    room = ChatRoom.objects.select_related('user').get(pk=room_id)
+
+    if request.method == 'POST':
+        data = json.loads(request.body)
+        text = (data.get('text') or '').strip()
+        if not text:
+            return JsonResponse({'error': 'Пустое сообщение'}, status=400)
+        msg = ChatMessage.objects.create(
+            room=room,
+            author=request.user,
+            is_staff_message=True,
+            text=text,
+        )
+        return JsonResponse({
+            'id': msg.id, 'text': msg.text,
+            'is_staff': True, 'time': msg.created_at.strftime('%H:%M'),
+        })
+
+    if request.headers.get('X-Requested-With') == 'XMLHttpRequest':
+        after_id = int(request.GET.get('after', 0))
+        msgs = room.messages.filter(pk__gt=after_id).values(
+            'id', 'text', 'is_staff_message', 'created_at',
+        )
+        room.messages.filter(is_staff_message=False, is_read=False).update(is_read=True)
+        return JsonResponse({
+            'messages': [
+                {
+                    'id': m['id'], 'text': m['text'],
+                    'is_staff': m['is_staff_message'],
+                    'time': m['created_at'].strftime('%H:%M'),
+                }
+                for m in msgs
+            ]
+        })
+
+    messages_qs = room.messages.all()[:100]
+    room.messages.filter(is_staff_message=False, is_read=False).update(is_read=True)
+    return render(request, 'core/chat_room.html', {
+        'room': room,
+        'chat_messages': messages_qs,
     })

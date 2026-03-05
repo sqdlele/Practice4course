@@ -1,26 +1,30 @@
 from django import forms
 from decimal import Decimal
 from django.contrib.auth.forms import UserCreationForm
-from django.contrib.auth.models import User
+from django.contrib.auth import get_user_model
 
-from .models import Service, Order, Client
+from .models import Service, Order, OrderItem, Client
+
+User = get_user_model()
 
 
 class RegisterForm(UserCreationForm):
     """Регистрация сотрудника."""
-    username = forms.CharField(
-        label='Логин',
-        widget=forms.TextInput(attrs={'class': 'form-input', 'placeholder': 'Логин'}),
-    )
-    first_name = forms.CharField(
-        label='Имя',
-        required=False,
-        widget=forms.TextInput(attrs={'class': 'form-input', 'placeholder': 'Имя'}),
+    phone = forms.CharField(
+        label='Телефон',
+        widget=forms.TextInput(attrs={'class': 'form-input', 'placeholder': '89991234567'}),
     )
     last_name = forms.CharField(
         label='Фамилия',
-        required=False,
         widget=forms.TextInput(attrs={'class': 'form-input', 'placeholder': 'Фамилия'}),
+    )
+    first_name = forms.CharField(
+        label='Имя',
+        widget=forms.TextInput(attrs={'class': 'form-input', 'placeholder': 'Имя'}),
+    )
+    patronymic = forms.CharField(
+        label='Отчество',
+        widget=forms.TextInput(attrs={'class': 'form-input', 'placeholder': 'Отчество'}),
     )
     password1 = forms.CharField(
         label='Пароль',
@@ -33,7 +37,7 @@ class RegisterForm(UserCreationForm):
 
     class Meta:
         model = User
-        fields = ('username', 'first_name', 'last_name', 'password1', 'password2')
+        fields = ('phone', 'last_name', 'first_name', 'patronymic', 'password1', 'password2')
 
 
 class OrderCreateForm(forms.Form):
@@ -49,20 +53,13 @@ class OrderCreateForm(forms.Form):
         label='Телефон нового клиента',
         max_length=20,
         required=False,
-        widget=forms.TextInput(attrs={'class': 'form-input', 'placeholder': '+7 ...'}),
+        widget=forms.TextInput(attrs={'class': 'form-input', 'placeholder': '89991234567'}),
     )
     services = forms.ModelMultipleChoiceField(
         label='Услуги',
         queryset=Service.objects.all(),
         widget=forms.CheckboxSelectMultiple(attrs={'class': 'service-checkbox'}),
         required=True,
-    )
-    complexity = forms.TypedChoiceField(
-        label='Множитель сложности',
-        choices=Order.COMPLEXITY_CHOICES,
-        coerce=Decimal,
-        widget=forms.RadioSelect(attrs={'class': 'complexity-radio'}),
-        initial=Decimal('1.0'),
     )
     ready_by = forms.DateField(
         label='Готовность к',

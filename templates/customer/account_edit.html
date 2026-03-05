@@ -1,0 +1,36 @@
+{% extends 'customer/base.html' %}
+{% load static %}
+{% block title %}Редактирование профиля — Чисто.Тут{% endblock %}
+
+{% block content %}
+<div class="account-page account-edit-page">
+    <nav class="breadcrumbs">
+        <a href="{% url 'customer:home' %}">Главная</a>
+        <span class="bc-sep">/</span>
+        <a href="{% url 'customer:account' %}">Личный кабинет</a>
+        <span class="bc-sep">/</span>
+        <span>Редактирование профиля</span>
+    </nav>
+
+    <h1 class="account-title">Редактирование профиля</h1>
+
+    <section class="account-section">
+        <form method="post" class="account-profile-form">
+            {% csrf_token %}
+            {% for field in form %}
+            <div class="form-row">
+                <label for="{{ field.id_for_label }}">{{ field.label }}</label>
+                {{ field }}
+                {% if field.errors %}
+                <span class="form-error">{{ field.errors.0 }}</span>
+                {% endif %}
+            </div>
+            {% endfor %}
+            <div class="form-actions">
+                <button type="submit" class="btn btn-primary">Сохранить</button>
+                <a href="{% url 'customer:account' %}" class="btn btn-ghost">Отмена</a>
+            </div>
+        </form>
+    </section>
+</div>
+{% endblock %}
