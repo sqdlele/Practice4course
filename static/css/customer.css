@@ -2,6 +2,7 @@
 .btn-lg { padding: 0.75rem 1.5rem; font-size: 1rem; }
 .btn-sm { padding: 0.35rem 0.75rem; font-size: 0.8rem; }
 
+<<<<<<< HEAD
 html, body {
     max-width: 100%;
     overflow-x: hidden;
@@ -46,6 +47,8 @@ html, body {
     margin-left: 0;
 }
 
+=======
+>>>>>>> 37418da3250cb3b9edf5f0889124673efb867720
 /* Customer header — apetta-style */
 .c-header {
     position: sticky;
