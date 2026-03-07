@@ -1,0 +1,107 @@
+{% extends 'base.html' %}
+{% block title %}Чат: {{ room.user.get_full_name|default:room.user.username }} — Чисто.Тут{% endblock %}
+
+{% block content %}
+<div class="staff-chat">
+    <div class="staff-chat-header">
+        <a href="{% url 'core:staff_chat_list' %}" class="btn btn-ghost">&larr; Все чаты</a>
+        <h2>{{ room.user.get_full_name|default:room.user.username }}</h2>
+    </div>
+    <div id="chat-messages" class="staff-chat-body">
+        {% for msg in chat_messages %}
+        <div class="chat-msg {% if msg.is_staff_message %}chat-msg-staff{% else %}chat-msg-user{% endif %}" data-msg-id="{{ msg.id }}">
+            <span class="chat-msg-text">{{ msg.text }}</span>
+            <span class="chat-msg-time" data-utc="{{ msg.created_at.isoformat }}"></span>
+        </div>
+        {% endfor %}
+    </div>
+    <form id="chat-form" class="staff-chat-footer">
+        {% csrf_token %}
+        <input type="text" id="chat-input" class="form-input" placeholder="Ответить..." autocomplete="off">
+        <button type="submit" class="btn btn-primary">Отправить</button>
+    </form>
+</div>
+
+<script>
+(function() {
+    const body = document.getElementById('chat-messages');
+    const form = document.getElementById('chat-form');
+    const input = document.getElementById('chat-input');
+    const csrfToken = '{{ csrf_token }}';
+    const roomUrl = '{% url "core:staff_chat" room.pk %}';
+
+    // Функция форматирования времени устройства
+    function formatLocalTime(isoString) {
+        const date = new Date(isoString);
+        return isNaN(date) ? '' : date.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+    }
+
+    // 1. Форматируем время для уже отрисованных сообщений
+    function refreshAllTimes() {
+        document.querySelectorAll('.chat-msg-time[data-utc]').forEach(span => {
+            span.textContent = formatLocalTime(span.getAttribute('data-utc'));
+        });
+    }
+    refreshAllTimes();
+
+    // 2. Определяем актуальный lastId из DOM, чтобы избежать дублей
+    function updateLastId() {
+        const allMsgs = document.querySelectorAll('[data-msg-id]');
+        return allMsgs.length > 0 ? parseInt(allMsgs[allMsgs.length - 1].getAttribute('data-msg-id')) : 0;
+    }
+    let lastId = updateLastId();
+
+    body.scrollTop = body.scrollHeight;
+
+    function addMessage(msg) {
+        // Проверка на дубликат по ID
+        if (document.querySelector(`[data-msg-id="${msg.id}"]`)) return;
+
+        const div = document.createElement('div');
+        div.className = 'chat-msg ' + (msg.is_staff ? 'chat-msg-staff' : 'chat-msg-user');
+        div.setAttribute('data-msg-id', msg.id);
+        
+        div.innerHTML = `
+            <span class="chat-msg-text">${escapeHtml(msg.text)}</span>
+            <span class="chat-msg-time">${formatLocalTime(msg.time)}</span>
+        `;
+        body.appendChild(div);
+        body.scrollTop = body.scrollHeight;
+        
+        if (msg.id > lastId) lastId = msg.id;
+    }
+
+    function escapeHtml(t) {
+        const d = document.createElement('div');
+        d.textContent = t;
+        return d.innerHTML;
+    }
+
+    form.addEventListener('submit', function(e) {
+        e.preventDefault();
+        const text = input.value.trim();
+        if (!text) return;
+        input.value = '';
+        fetch(roomUrl, {
+            method: 'POST',
+            headers: {'Content-Type': 'application/json', 'X-CSRFToken': csrfToken},
+            body: JSON.stringify({text}),
+        }).then(r => r.json()).then(msg => {
+            addMessage(msg);
+        });
+    });
+
+    setInterval(function() {
+        fetch(roomUrl + '?after=' + lastId, {
+            headers: {'X-Requested-With': 'XMLHttpRequest'}
+        })
+        .then(r => r.json())
+        .then(data => {
+            if (data.messages) {
+                data.messages.forEach(m => addMessage(m));
+            }
+        });
+    }, 3000);
+})();
+</script>
+{% endblock %}

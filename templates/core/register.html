@@ -1,0 +1,37 @@
+{% extends 'base.html' %}
+{% block title %}Регистрация — Чисто.Тут{% endblock %}
+
+{% block content %}
+<div class="auth-card">
+    <h1 class="auth-title">Регистрация сотрудника</h1>
+    <p class="auth-subtitle">Создание учётной записи. Вход станет доступен после подтверждения администратором.</p>
+
+    <form method="post" class="auth-form">
+        {% csrf_token %}
+        {% if form.non_field_errors %}
+            <ul class="form-errors">
+                {% for err in form.non_field_errors %}
+                    <li>{{ err }}</li>
+                {% endfor %}
+            </ul>
+        {% endif %}
+        {% for field in form %}
+            <div class="form-group">
+                <label for="{{ field.id_for_label }}">{{ field.label }}</label>
+                {{ field }}
+                {% if field.errors %}
+                    <span class="field-error">{{ field.errors.0 }}</span>
+                {% endif %}
+                {% if field.help_text %}
+                    <span class="help-text">{{ field.help_text }}</span>
+                {% endif %}
+            </div>
+        {% endfor %}
+        <button type="submit" class="btn btn-primary btn-block">Зарегистрироваться</button>
+    </form>
+
+    <p class="auth-footer">
+        Уже есть аккаунт? <a href="{% url 'core:login' %}">Войти</a>
+    </p>
+</div>
+{% endblock %}

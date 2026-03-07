@@ -1,0 +1,61 @@
+{% extends 'customer/base.html' %}
+{% load static %}
+{% block title %}Личный кабинет — Чисто.Тут{% endblock %}
+
+{% block content %}
+<div class="account-page">
+    <h1 class="account-title">Личный кабинет</h1>
+
+    {% if messages %}
+    <ul class="messages account-messages">
+        {% for message in messages %}
+        <li class="message message-{{ message.tags }}">{{ message }}</li>
+        {% endfor %}
+    </ul>
+    {% endif %}
+
+    <section class="account-section account-profile">
+        <h2>Профиль</h2>
+        <div class="account-profile-card">
+            <dl class="account-dl">
+                <dt>ФИО</dt>
+                <dd>{{ user.get_full_name|default:"—" }}</dd>
+                <dt>Телефон</dt>
+                <dd>{{ user.phone }}</dd>
+                <dt>Email</dt>
+                <dd>{{ user.email|default:"—" }}</dd>
+            </dl>
+            <a href="{% url 'customer:account_edit' %}" class="btn btn-ghost">Редактировать профиль</a>
+        </div>
+    </section>
+
+    <section class="account-section account-orders">
+        <h2>Мои заказы</h2>
+        {% if orders %}
+        <div class="account-orders-list">
+            {% for order in orders %}
+            <div class="account-order-card">
+                <div class="account-order-head">
+                    <span class="account-order-num">Заказ № {{ order.pk }}</span>
+                    <span class="account-order-date">{{ order.created_at|date:"d.m.Y H:i" }}</span>
+                    <span class="account-order-status account-order-status-{{ order.status }}">{{ order.get_status_display }}</span>
+                </div>
+                <div class="account-order-body">
+                    <p class="account-order-ready">Готовность: {% if order.ready_by %}{{ order.ready_by|date:"d.m.Y" }}{% else %}—{% endif %}</p>
+                    <ul class="account-order-items">
+                        {% for item in order.items.all %}
+                        <li>{{ item.service.name }} — {{ item.quantity }} шт. × {{ item.unit_price }} ₽</li>
+                        {% endfor %}
+                    </ul>
+                    <p class="account-order-total">Итого: <strong>{{ order.get_total }} ₽</strong></p>
+                </div>
+            </div>
+            {% endfor %}
+        </div>
+        {% else %}
+        <p class="account-empty">У вас пока нет заказов.</p>
+        <a href="{% url 'customer:home' %}#services" class="btn btn-primary">Выбрать услуги</a>
+        {% endif %}
+    </section>
+</div>
+{% endblock %}

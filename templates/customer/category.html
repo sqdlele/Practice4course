@@ -1,0 +1,33 @@
+{% extends 'customer/base.html' %}
+{% load static %}
+{% block title %}{{ category.name }} — Чисто.Тут{% endblock %}
+
+{% block content %}
+<nav class="breadcrumbs">
+    <a href="{% url 'customer:home' %}">Главная</a>
+    <span class="bc-sep">/</span>
+    <span>{{ category.name }}</span>
+</nav>
+
+<section class="cat-detail">
+    <h1 class="cat-detail-title">Химчистка: {{ category.name|lower }}</h1>
+
+    <p class="cat-detail-desc">
+        {% if category.description %}
+            {{ category.description }}
+        {% else %}
+            Химчистка «Чисто.Тут» — ваш надёжный помощник в борьбе за чистоту вещей. Мы всегда готовы взять на себя трудную работу, чтобы ваше свободное время было посвящено близким и дому, любимому делу, творчеству и другим приятным моментам жизни. Приняв заказ, опытный специалист подробно проконсультирует вас, если возникнут вопросы. Доверьте вещи квалифицированным технологам химчистки, и вам не придётся об этом жалеть. В работе используются лишь проверенные высокоэффективные чистящие и моющие средства. Это служит гарантией качественного выполнения любого заказа.
+        {% endif %}
+    </p>
+
+    {% if services %}
+    <div class="cat-services-grid">
+        {% for service in services %}
+        <a href="{% url 'customer:service_detail' category.slug service.pk %}" class="cat-service-chip">{{ service.name }}</a>
+        {% endfor %}
+    </div>
+    {% else %}
+    <p class="empty">В этой категории пока нет услуг.</p>
+    {% endif %}
+</section>
+{% endblock %}

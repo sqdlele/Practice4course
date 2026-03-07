@@ -1,0 +1,26 @@
+{% extends 'base.html' %}
+{% block title %}Чаты — Чисто.Тут{% endblock %}
+
+{% block content %}
+<div class="dashboard">
+    <h1 class="page-title">Чаты с клиентами</h1>
+
+    {% if rooms %}
+        <div class="chat-list">
+            {% for item in rooms %}
+            <a href="{% url 'core:staff_chat' item.room.pk %}" class="chat-list-item {% if item.unread %}chat-list-unread{% endif %}">
+                <div class="chat-list-name">{{ item.room.user.get_full_name|default:item.room.user.username }}</div>
+                <div class="chat-list-preview">
+                    {% if item.last_msg %}{{ item.last_msg.text|truncatechars:60 }}{% else %}Нет сообщений{% endif %}
+                </div>
+                {% if item.unread %}
+                    <span class="chat-list-badge">{{ item.unread }}</span>
+                {% endif %}
+            </a>
+            {% endfor %}
+        </div>
+    {% else %}
+        <p class="empty">Пока нет чатов.</p>
+    {% endif %}
+</div>
+{% endblock %}

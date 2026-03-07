@@ -1,0 +1,186 @@
+{% extends 'customer/base.html' %}
+{% load static %}
+{% block title %}Корзина — Чисто.Тут{% endblock %}
+
+{% block content %}
+<section class="cart-page">
+    <h1 class="section-title">Корзина</h1>
+
+    <div id="cart-empty" class="cart-empty" style="display:none">
+        <svg width="64" height="64" viewBox="0 0 24 24" fill="none" stroke="var(--text-muted)" stroke-width="1.2">
+            <circle cx="9" cy="21" r="1"/><circle cx="20" cy="21" r="1"/>
+            <path d="M1 1h4l2.68 13.39a2 2 0 0 0 2 1.61h9.72a2 2 0 0 0 2-1.61L23 6H6"/>
+        </svg>
+        <p>Корзина пуста</p>
+        <a href="{% url 'customer:catalog' %}" class="btn btn-primary">Перейти к услугам</a>
+    </div>
+
+    <div id="cart-content" style="display:none">
+        <div id="cart-items" class="cart-items"></div>
+
+        <div class="cart-summary">
+            <div class="cart-summary-row">
+                <span>Позиций:</span>
+                <strong id="cart-count">0</strong>
+            </div>
+            <div class="cart-summary-row cart-summary-total">
+                <span>Итого (базовая цена):</span>
+                <strong id="cart-total">0 ₽</strong>
+            </div>
+            <p class="cart-note">Окончательная стоимость может быть скорректирована сотрудником при приёмке вещей.</p>
+
+            {% if user.is_authenticated %}
+            <button type="button" id="cart-submit" class="btn btn-primary btn-lg btn-block">Оформить заявку</button>
+            {% else %}
+            <p class="cart-auth-note">
+                <a href="{% url 'customer:login' %}?next={% url 'customer:cart' %}">Войдите</a> или
+                <a href="{% url 'customer:register' %}">зарегистрируйтесь</a>, чтобы оформить заявку.
+            </p>
+            {% endif %}
+        </div>
+    </div>
+
+    <div id="cart-success" class="cart-success" style="display:none">
+        <svg width="64" height="64" viewBox="0 0 24 24" fill="none" stroke="var(--primary)" stroke-width="2">
+            <path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/>
+        </svg>
+        <h2>Заявка оформлена!</h2>
+        <p>Заказ <strong id="cart-order-id">#</strong>. Ожидайте подтверждения от сотрудника.</p>
+        <a href="{% url 'customer:home' %}" class="btn btn-primary">На главную</a>
+    </div>
+</section>
+
+<script src="{% static 'js/cart.js' %}"></script>
+<script>
+(function(){
+    var emptyEl = document.getElementById('cart-empty');
+    var contentEl = document.getElementById('cart-content');
+    var itemsEl = document.getElementById('cart-items');
+    var countEl = document.getElementById('cart-count');
+    var totalEl = document.getElementById('cart-total');
+    var submitBtn = document.getElementById('cart-submit');
+    var successEl = document.getElementById('cart-success');
+    var orderIdEl = document.getElementById('cart-order-id');
+
+    var servicesCache = null;
+
+    function fetchServices() {
+        return fetch('{% url "customer:api_services" %}')
+            .then(function(r){ return r.json(); })
+            .then(function(d){ servicesCache = {}; d.services.forEach(function(s){ servicesCache[s.id] = s; }); });
+    }
+
+    function renderCart() {
+        var items = Cart.getAll();
+        if (!items.length) {
+            emptyEl.style.display = '';
+            contentEl.style.display = 'none';
+            return;
+        }
+        emptyEl.style.display = 'none';
+        contentEl.style.display = '';
+        itemsEl.innerHTML = '';
+        var total = 0;
+        var count = 0;
+
+        items.forEach(function(item) {
+            var svc = servicesCache ? servicesCache[item.service_id] : null;
+            if (!svc) return;
+            var price = parseFloat(svc.price);
+            var lineTotal = price * item.qty;
+            if (item.length && item.width) lineTotal = price * item.length * item.width * item.qty;
+            if (item.weight) lineTotal = price * item.weight * item.qty;
+            total += lineTotal;
+            count += item.qty;
+
+            var div = document.createElement('div');
+            div.className = 'cart-item';
+            var imgHtml = svc.image
+                ? '<img src="' + svc.image + '" alt="' + svc.name + '">'
+                : '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><circle cx="12" cy="12" r="10"/></svg>';
+
+            var detailsHtml = '';
+            if (item.length && item.width) detailsHtml = '<span class="cart-item-detail">' + item.length + ' x ' + item.width + ' м</span>';
+            if (item.weight) detailsHtml = '<span class="cart-item-detail">' + item.weight + ' кг</span>';
+
+            div.innerHTML =
+                '<div class="cart-item-thumb">' + imgHtml + '</div>' +
+                '<div class="cart-item-info">' +
+                    '<h3>' + svc.name + '</h3>' +
+                    '<span class="cart-item-time">' + svc.cleaning_time + '</span>' +
+                    detailsHtml +
+                '</div>' +
+                '<div class="cart-item-qty">' +
+                    '<button type="button" class="svc-qty-btn ci-minus" data-id="' + item.service_id + '">&minus;</button>' +
+                    '<span class="svc-qty-val">' + item.qty + '</span>' +
+                    '<button type="button" class="svc-qty-btn ci-plus" data-id="' + item.service_id + '">+</button>' +
+                '</div>' +
+                '<span class="cart-item-price">' + Math.round(lineTotal).toLocaleString('ru-RU') + ' ₽</span>' +
+                '<button type="button" class="cart-item-remove" data-id="' + item.service_id + '" title="Удалить">&times;</button>';
+            itemsEl.appendChild(div);
+        });
+
+        countEl.textContent = count;
+        totalEl.textContent = Math.round(total).toLocaleString('ru-RU') + ' ₽';
+
+        itemsEl.querySelectorAll('.ci-minus').forEach(function(btn){
+            btn.addEventListener('click', function(){
+                var id = parseInt(btn.dataset.id);
+                var ci = Cart.get(id);
+                if (ci && ci.qty > 1) { ci.qty--; Cart.set(ci); }
+                else Cart.remove(id);
+                renderCart();
+            });
+        });
+        itemsEl.querySelectorAll('.ci-plus').forEach(function(btn){
+            btn.addEventListener('click', function(){
+                var id = parseInt(btn.dataset.id);
+                var ci = Cart.get(id);
+                if (ci) { ci.qty++; Cart.set(ci); renderCart(); }
+            });
+        });
+        itemsEl.querySelectorAll('.cart-item-remove').forEach(function(btn){
+            btn.addEventListener('click', function(){
+                Cart.remove(parseInt(btn.dataset.id));
+                renderCart();
+            });
+        });
+    }
+
+    fetchServices().then(renderCart);
+
+    if (submitBtn) {
+        submitBtn.addEventListener('click', function(){
+            submitBtn.disabled = true;
+            submitBtn.textContent = 'Оформляем...';
+            fetch('{% url "customer:api_create_order" %}', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'X-CSRFToken': '{{ csrf_token }}',
+                },
+                body: JSON.stringify({ items: Cart.getAll() }),
+            })
+            .then(function(r){ return r.json(); })
+            .then(function(data){
+                if (data.order_id) {
+                    Cart.clear();
+                    contentEl.style.display = 'none';
+                    orderIdEl.textContent = '#' + data.order_id;
+                    successEl.style.display = '';
+                } else {
+                    submitBtn.disabled = false;
+                    submitBtn.textContent = 'Оформить заявку';
+                    alert(data.error || 'Ошибка оформления');
+                }
+            })
+            .catch(function(){
+                submitBtn.disabled = false;
+                submitBtn.textContent = 'Оформить заявку';
+                alert('Ошибка сети');
+            });
+        });
+    }
+})();
+</script>
+{% endblock %}

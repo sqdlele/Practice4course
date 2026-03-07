@@ -1,0 +1,37 @@
+{% extends 'customer/base.html' %}
+{% block title %}Вход — Чисто.Тут{% endblock %}
+
+{% block content %}
+<div class="auth-card">
+    <h1 class="auth-title">Вход</h1>
+    <p class="auth-subtitle">Для клиентов</p>
+
+    <form method="post" class="auth-form">
+        {% csrf_token %}
+        {% if form.non_field_errors %}
+            <ul class="form-errors">
+                {% for err in form.non_field_errors %}
+                    <li>{{ err }}</li>
+                {% endfor %}
+            </ul>
+        {% endif %}
+        <div class="form-group">
+            <label for="id_username">Телефон</label>
+            <input type="text" name="username" id="id_username" class="form-input" required
+                   value="{{ form.username.value|default:'' }}" placeholder="89991234567" autofocus>
+        </div>
+        <div class="form-group">
+            <label for="id_password">Пароль</label>
+            <input type="password" name="password" id="id_password" class="form-input" required placeholder="Пароль">
+        </div>
+        <button type="submit" class="btn btn-primary btn-block">Войти</button>
+    </form>
+
+    <p class="auth-footer">
+        Нет аккаунта? <a href="{% url 'customer:register' %}">Зарегистрироваться</a>
+    </p>
+    <p class="auth-footer">
+        <a href="{% url 'core:login' %}">Вход для сотрудников</a>
+    </p>
+</div>
+{% endblock %}
