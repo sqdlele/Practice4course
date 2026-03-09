@@ -5,6 +5,7 @@
 html, body {
     max-width: 100%;
     overflow-x: hidden;
+    position: relative;
 }
 
 /* Контейнер карточек */
@@ -532,7 +533,12 @@ html, body {
 
 /* Map — fullwidth */
 .map-fullwidth {
-    margin: 0 calc(-50vw + 50%);
+width: 100%; /* Занимает всю ширину родителя */
+    position: relative;
+    left: 50%;
+    right: 50%;
+    margin-left: -50vw;
+    margin-right: -50vw;
     width: 100vw;
     margin-bottom: 2.5rem;
 }
