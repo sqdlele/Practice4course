@@ -1,6 +1,7 @@
 from decimal import Decimal
+import re
 from django.shortcuts import render, redirect
-from django.db.models import Q
+from django.db.models import Q, Prefetch
 from django.contrib.auth.views import LoginView, LogoutView
 from django.contrib.auth.decorators import login_required
 from django.views.generic import CreateView
@@ -9,7 +10,7 @@ from django.utils import timezone
 from django.http import JsonResponse
 from django.views.decorators.http import require_GET
 
-from .models import Order, Client, Service, OrderItem
+from .models import Order, Client, Service, OrderItem, ServiceCategory
 from .forms import RegisterForm, OrderCreateForm
 from customer.models import ChatRoom, ChatMessage
 
@@ -68,16 +69,14 @@ def home(request):
         ready_by__lte=today,
     ).select_related('client').order_by('ready_by', 'created_at')[:20]
 
-    # Поиск по ID или телефону
+    # Поиск по ID, ФИО или телефону (ФИО — без учёта регистра, телефон — по цифрам)
     query = request.GET.get('q', '').strip()
     search_results = []
     if query:
         if query.isdigit():
             search_results = Order.objects.filter(pk=int(query)).select_related('client')
         else:
-            search_results = Order.objects.filter(
-                client__phone__icontains=query
-            ).select_related('client').order_by('-created_at')[:20]
+            search_results = _order_search_by_client(query)
 
     context = {
         'in_work': in_work,
@@ -89,22 +88,92 @@ def home(request):
     return render(request, 'core/home.html', context)
 
 
+def _order_search_by_client(q):
+    """Поиск заказов по ФИО (без учёта регистра) или телефону (по цифрам). Регистр через Python — SQLite не переводит кириллицу в lower()."""
+    q_lower = q.lower()
+    digits = re.sub(r'\D', '', q)
+    # По телефону — в БД
+    phone_q = Q(client__phone__icontains=q)
+    if len(digits) >= 3:
+        phone_q |= Q(client__phone__contains=digits)
+    by_phone = list(
+        Order.objects.filter(phone_q).select_related('client').order_by('-created_at')[:20]
+    )
+    seen_ids = {o.pk for o in by_phone}
+    if len(by_phone) >= 20:
+        return by_phone
+    # По ФИО без учёта регистра — в Python (кириллица в SQLite lower() не поддерживается)
+    candidates = (
+        Order.objects.exclude(pk__in=seen_ids)
+        .select_related('client')
+        .order_by('-created_at')[:300]
+    )
+    for order in candidates:
+        if len(by_phone) >= 20:
+            break
+        if q_lower in order.client.name.lower():
+            by_phone.append(order)
+            seen_ids.add(order.pk)
+    return by_phone
+
+
 @login_required
 @require_GET
 def api_client_search(request):
-    """Живой поиск клиентов по имени или телефону (JSON)."""
+    """Живой поиск клиентов по имени или телефону (JSON). ФИО без учёта регистра — через Python (кириллица в SQLite)."""
     q = (request.GET.get('q') or '').strip()[:50]
     if len(q) < 2:
         return JsonResponse({'clients': []})
-    clients = Client.objects.filter(
-        Q(name__icontains=q) | Q(phone__icontains=q)
-    ).values('id', 'name', 'phone')[:15]
-    return JsonResponse({'clients': list(clients)})
+    q_lower = q.lower()
+    digits = re.sub(r'\D', '', q)
+    # По телефону — в БД
+    phone_q = Q(phone__icontains=q)
+    if len(digits) >= 3:
+        phone_q |= Q(phone__contains=digits)
+    by_phone = list(Client.objects.filter(phone_q).values('id', 'name', 'phone')[:15])
+    seen_ids = {c['id'] for c in by_phone}
+    if len(by_phone) >= 15:
+        return JsonResponse({'clients': by_phone})
+    # По ФИО без учёта регистра — в Python
+    for client in Client.objects.exclude(pk__in=seen_ids).values('id', 'name', 'phone').order_by('id')[:400]:
+        if len(by_phone) >= 15:
+            break
+        if q_lower in (client['name'] or '').lower():
+            by_phone.append(client)
+            seen_ids.add(client['id'])
+    return JsonResponse({'clients': by_phone})
+
+
+@login_required
+@require_GET
+def api_order_search(request):
+    """Живой поиск заказов по ID, ФИО или телефону клиента (JSON)."""
+    q = (request.GET.get('q') or '').strip()[:50]
+    if not q:
+        return JsonResponse({'orders': []})
+    if q.isdigit():
+        orders = Order.objects.filter(pk=int(q)).select_related('client')
+    else:
+        orders = _order_search_by_client(q)
+    status_display = dict(Order.STATUS_CHOICES)
+    return JsonResponse({
+        'orders': [
+            {
+                'id': o.pk,
+                'client_name': o.client.name,
+                'client_phone': o.client.phone,
+                'status': o.status,
+                'status_display': status_display.get(o.status, o.status),
+                'ready_by': o.ready_by.strftime('%d.%m.%Y') if o.ready_by else None,
+            }
+            for o in orders
+        ]
+    })
 
 
 @login_required
 def order_create(request):
-    """Оформление нового заказа: выбор или регистрация клиента + услуги."""
+    """Оформление нового заказа: выбор или регистрация клиента + услуги по категориям с подпунктами."""
     default_ready = timezone.localdate() + timezone.timedelta(days=3)
     form = OrderCreateForm(
         request.POST or None,
@@ -121,6 +190,11 @@ def order_create(request):
             ready_by=form.cleaned_data['ready_by'],
         )
         for service in form.cleaned_data['services']:
+            qty = request.POST.get(f'quantity_{service.pk}', '1')
+            try:
+                quantity = max(1, int(qty))
+            except (ValueError, TypeError):
+                quantity = 1
             length = Decimal(request.POST.get(f'length_{service.pk}', '0') or '0')
             width = Decimal(request.POST.get(f'width_{service.pk}', '0') or '0')
             weight = Decimal(request.POST.get(f'weight_{service.pk}', '0') or '0')
@@ -129,7 +203,7 @@ def order_create(request):
                 order=order,
                 service=service,
                 unit_price=service.price,
-                quantity=1,
+                quantity=quantity,
                 length=length,
                 width=width,
                 weight=weight,
@@ -140,9 +214,37 @@ def order_create(request):
         messages.success(request, f'Заказ #{order.pk} оформлен. Итого: {order.get_total()} ₽.')
         return redirect('core:home')
 
+    # Группировка: категории → родительские услуги → выбираемые пункты (дети или сама услуга)
+    categories = ServiceCategory.objects.prefetch_related(
+        Prefetch(
+            'services',
+            queryset=Service.objects.filter(parent__isnull=True).prefetch_related('children').order_by('name'),
+        )
+    ).order_by('order', 'name')
+
+    service_groups = []
+    for cat in categories:
+        groups = []
+        for parent in cat.services.all():
+            children = list(parent.children.all())
+            items = children if children else [parent]
+            groups.append({'parent': parent, 'items': items})
+        if groups:
+            service_groups.append({'category': cat, 'groups': groups})
+
+    # Услуги без категории (родительские) — одна общая группа
+    uncat = Service.objects.filter(category__isnull=True, parent__isnull=True).prefetch_related('children').order_by('name')
+    if uncat.exists():
+        uncat_groups = []
+        for parent in uncat:
+            children = list(parent.children.all())
+            items = children if children else [parent]
+            uncat_groups.append({'parent': parent, 'items': items})
+        service_groups.append({'category': None, 'groups': uncat_groups})
+
     return render(request, 'core/order_create.html', {
         'form': form,
-        'services': Service.objects.all(),
+        'service_groups': service_groups,
     })
 
 

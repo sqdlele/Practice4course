@@ -7,28 +7,28 @@
 <section class="about-hero">
     <div class="about-hero-bg"></div>
     <div class="about-hero-content">
-        <span class="about-badge">С 2020 года</span>
-        <h1>Мы — <span class="accent">Чисто.Тут</span></h1>
-        <p class="about-hero-sub">Профессиональная химчистка в Ижевске. Возвращаем вещам первозданный вид с заботой и вниманием к каждой детали.</p>
+        <span class="about-badge">{{ about.hero_badge|default:"С 2020 года" }}</span>
+        <h1>{{ about.hero_title|default:"Мы — Чисто.Тут" }}</h1>
+        <p class="about-hero-sub">{{ about.hero_subtitle|default:"Профессиональная химчистка в Ижевске. Возвращаем вещам первозданный вид с заботой и вниманием к каждой детали." }}</p>
     </div>
 </section>
 
 <!-- Цифры -->
 <section class="about-stats">
     <div class="about-stat">
-        <span class="about-stat-num" data-target="0">0</span>
+        <span class="about-stat-num" data-target="{{ stats.years|default:0 }}">0</span>
         <span class="about-stat-label">лет опыта</span>
     </div>
     <div class="about-stat">
-        <span class="about-stat-num" data-target="0">0</span>
+        <span class="about-stat-num" data-target="{{ stats.orders|default:0 }}">0</span>
         <span class="about-stat-label">выполненных заказов</span>
     </div>
     <div class="about-stat">
-        <span class="about-stat-num" data-target="0">0</span>
+        <span class="about-stat-num" data-target="{{ stats.clients|default:0 }}">0</span>
         <span class="about-stat-label">довольных клиентов</span>
     </div>
     <div class="about-stat">
-        <span class="about-stat-num" data-target="0">0</span>
+        <span class="about-stat-num" data-target="{{ stats.reviews_pct|default:0 }}">0</span>
         <span class="about-stat-label">% положительных отзывов</span>
     </div>
 </section>
@@ -36,19 +36,19 @@
 <!-- О компании -->
 <section class="about-story">
     <div class="about-story-text">
-        <h2>Наша история</h2>
-        <p>«Чисто.Тут» начиналась как небольшая мастерская с одним сотрудником и мечтой — сделать химчистку доступной, честной и по-настоящему качественной. Сегодня мы обслуживаем тысячи клиентов по всему Ижевску.</p>
-        <p>Мы используем только <strong>профессиональное оборудование</strong> ведущих европейских производителей и <strong>экологичные составы</strong>, которые бережно очищают ткань, сохраняя её цвет, текстуру и форму.</p>
-        <p>Каждый заказ проходит <strong>тройной контроль качества</strong> — от приёмки до выдачи. Мы не отдаём вещь, пока не будем на 100% уверены в результате.</p>
+        <h2>{{ about.story_title|default:"Наша история" }}</h2>
+        {% if about.story_para1 %}<p>{{ about.story_para1 }}</p>{% endif %}
+        {% if about.story_para2 %}<p>{{ about.story_para2 }}</p>{% endif %}
+        {% if about.story_para3 %}<p>{{ about.story_para3 }}</p>{% endif %}
     </div>
     <div class="about-story-visual">
         <div class="about-visual-card about-visual-card--top">
             <svg></svg>
-            <span>Рейтинг 0</span>
+            <span>{{ about.story_rating_text|default:"Рейтинг 4.9" }}</span>
         </div>
         <div class="about-visual-card about-visual-card--bottom">
             <svg></svg>
-            <span>Гарантия на все работы</span>
+            <span>{{ about.story_guarantee_text|default:"Гарантия на все работы" }}</span>
         </div>
     </div>
 </section>
@@ -57,48 +57,15 @@
 <section class="about-features">
     <h2 class="section-title">Почему выбирают нас</h2>
     <div class="about-features-grid">
+        {% for feature in about_features %}
         <div class="about-feature">
             <div class="about-feature-icon">
                 <svg></svg>
             </div>
-            <h3>Быстрые руки</h3>
-            <p>Все заказы готовы ровно в срок!!! </p>
+            <h3>{{ feature.title }}</h3>
+            <p>{{ feature.description }}</p>
         </div>
-        <div class="about-feature">
-            <div class="about-feature-icon">
-                <svg ></svg>
-            </div>
-            <h3>Бережная обработка</h3>
-            <p>Подбираем метод чистки индивидуально для каждого типа ткани</p>
-        </div>
-        <div class="about-feature">
-            <div class="about-feature-icon">
-                <svg></svg>
-            </div>
-            <h3>Экологичность</h3>
-            <p>Используем составы без ужасной химии — безопасно для здоровья, 100%.</p>
-        </div>
-        <div class="about-feature">
-            <div class="about-feature-icon">
-                <svg></svg>
-            </div>
-            <h3>Доставка</h3>
-            <p>Забираем и привозим вещи прямо к двери. Бесплатная доставка от 2000 ₽.</p>
-        </div>
-        <div class="about-feature">
-            <div class="about-feature-icon">
-                <svg></svg>
-            </div>
-            <h3>Прозрачные цены</h3>
-            <p>Фиксированный прайс без обмана. Стоимость известна до начала работ.</p>
-        </div>
-        <div class="about-feature">
-            <div class="about-feature-icon">
-                <svg></svg>
-            </div>
-            <h3>Программа лояльности</h3>
-            <p>Клиентам обратившимся в сервис 3 раза скидка!</p>
-        </div>
+        {% endfor %}
     </div>
 </section>
 
@@ -106,42 +73,29 @@
 <section class="about-process">
     <h2 class="section-title">Как мы работаем</h2>
     <div class="about-steps">
+        {% for step in about_steps %}
         <div class="about-step">
-            <div class="about-step-num">1</div>
-            <h3>Приём вещей</h3>
-            <p>Привезите вещи к нам или оформите доставку. Мастер осмотрит и зафиксирует состояние.</p>
+            <div class="about-step-num">{{ step.step_number }}</div>
+            <h3>{{ step.title }}</h3>
+            <p>{{ step.description }}</p>
         </div>
+        {% if not forloop.last %}
         <div class="about-step-line"></div>
-        <div class="about-step">
-            <div class="about-step-num">2</div>
-            <h3>Диагностика</h3>
-            <p>Определяем тип ткани, выявляем пятна и подбираем оптимальный метод обработки.</p>
-        </div>
-        <div class="about-step-line"></div>
-        <div class="about-step">
-            <div class="about-step-num">3</div>
-            <h3>Чистка</h3>
-            <p>Профессиональная обработка на современном оборудовании с контролем на каждом этапе.</p>
-        </div>
-        <div class="about-step-line"></div>
-        <div class="about-step">
-            <div class="about-step-num">4</div>
-            <h3>Выдача</h3>
-            <p>Финальный контроль, упаковка и выдача. Если есть замечания — переделаем бесплатно.</p>
-        </div>
+        {% endif %}
+        {% endfor %}
     </div>
 </section>
 
 <!-- CTA -->
 <section class="about-cta">
     <div class="about-cta-inner">
-        <h2>Доверьте нам свои вещи</h2>
-        <p>Первый заказ — со скидкой. Попробуйте качество, которое говорит само за себя.</p>
+        <h2>{{ about.cta_title|default:"Доверьте нам свои вещи" }}</h2>
+        <p>{{ about.cta_text|default:"Первый заказ — со скидкой. Попробуйте качество, которое говорит само за себя." }}</p>
         <div class="about-cta-actions">
             <a href="{% url 'customer:home' %}#services" class="btn btn-primary btn-lg">Выбрать услугу</a>
-            <a href="tel:+78001234567" class="btn btn-ghost btn-lg about-cta-phone">
+            <a href="tel:{{ cta_phone_href }}" class="btn btn-ghost btn-lg about-cta-phone">
                 <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6 19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72c.13.81.36 1.61.68 2.37a2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45c.76.32 1.56.55 2.37.68a2 2 0 0 1 1.72 2.03z"/></svg>
-                8 (800) 123-45-67
+                {{ about.cta_phone|default:"8 (800) 123-45-67" }}
             </a>
         </div>
     </div>
@@ -156,8 +110,12 @@
         if (animated) return;
         animated = true;
         nums.forEach(function(el) {
-            const target = parseInt(el.dataset.target);
+            const target = parseInt(el.dataset.target, 10) || 0;
             const duration = 2000;
+            if (target <= 0) {
+                el.textContent = '0';
+                return;
+            }
             const step = Math.max(1, Math.floor(target / 60));
             let current = 0;
             const timer = setInterval(function() {

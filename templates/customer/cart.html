@@ -27,7 +27,26 @@
                 <span>Итого (базовая цена):</span>
                 <strong id="cart-total">0 ₽</strong>
             </div>
+            <div id="cart-delivery-block" class="cart-delivery-block" style="display:none">
+                <p class="cart-delivery-title">Способ получения</p>
+                <div id="cart-delivery-options" class="cart-delivery-options"></div>
+                <div class="cart-summary-row cart-delivery-cost-row" id="cart-delivery-cost-row" style="display:none">
+                    <span>Доставка:</span>
+                    <strong id="cart-delivery-cost">0 ₽</strong>
+                </div>
+                <div class="cart-summary-row cart-summary-grand-total" id="cart-grand-total-row" style="display:none">
+                    <span>Итого к оплате:</span>
+                    <strong id="cart-grand-total">0 ₽</strong>
+                </div>
+            </div>
             <p class="cart-note">Окончательная стоимость может быть скорректирована сотрудником при приёмке вещей.</p>
+
+            {% if user.is_authenticated and has_discount_3 %}
+            <p class="cart-discount-hint">
+                <span class="cart-discount-hint-icon" aria-hidden="true">−3%</span>
+                Ваша скидка 3% будет применена к заказу при оформлении.
+            </p>
+            {% endif %}
 
             {% if user.is_authenticated %}
             <button type="button" id="cart-submit" class="btn btn-primary btn-lg btn-block">Оформить заявку</button>
@@ -82,6 +101,7 @@
         itemsEl.innerHTML = '';
         var total = 0;
         var count = 0;
+        var cartKg = 0;
 
         items.forEach(function(item) {
             var svc = servicesCache ? servicesCache[item.service_id] : null;
@@ -89,7 +109,10 @@
             var price = parseFloat(svc.price);
             var lineTotal = price * item.qty;
             if (item.length && item.width) lineTotal = price * item.length * item.width * item.qty;
-            if (item.weight) lineTotal = price * item.weight * item.qty;
+            if (item.weight) {
+                lineTotal = price * item.weight * item.qty;
+                cartKg += parseFloat(item.weight) * (item.qty || 1);
+            }
             total += lineTotal;
             count += item.qty;
 
@@ -122,6 +145,63 @@
 
         countEl.textContent = count;
         totalEl.textContent = Math.round(total).toLocaleString('ru-RU') + ' ₽';
+
+        var deliveryBlock = document.getElementById('cart-delivery-block');
+        var deliveryOptionsEl = document.getElementById('cart-delivery-options');
+        if (deliveryBlock && deliveryOptionsEl) {
+            deliveryBlock.style.display = '';
+            fetch('{% url "customer:api_delivery_options" %}?cart_total=' + encodeURIComponent(Math.round(total * 100) / 100) + '&cart_kg=' + encodeURIComponent(cartKg))
+                .then(function(r){ return r.json(); })
+                .then(function(data){
+                    var opts = data.delivery_options || [];
+                    deliveryOptionsEl.innerHTML = '';
+                    var selectedSlug = (window._cartDeliverySlug || 'pickup');
+                    opts.forEach(function(opt){
+                        var isSelected = opt.slug === selectedSlug;
+                        var costText = parseFloat(opt.cost) === 0 ? 'Бесплатно' : parseFloat(opt.cost).toLocaleString('ru-RU') + ' ₽';
+                        var label = document.createElement('label');
+                        label.className = 'cart-delivery-option';
+                        label.innerHTML = '<input type="radio" name="delivery_option" value="' + opt.slug + '" ' + (isSelected ? 'checked' : '') + '> ' +
+                            '<span class="cart-delivery-option-name">' + opt.name + '</span> ' +
+                            '<span class="cart-delivery-option-cost">' + costText + '</span>';
+                        label.querySelector('input').addEventListener('change', function(){
+                            window._cartDeliverySlug = opt.slug;
+                            updateDeliveryTotals(window._cartSubtotal || 0, window._cartDeliveryOptions || []);
+                        });
+                        deliveryOptionsEl.appendChild(label);
+                    });
+                    if (opts.length && !deliveryOptionsEl.querySelector('input:checked')) {
+                        deliveryOptionsEl.querySelector('input').checked = true;
+                        window._cartDeliverySlug = opts[0].slug;
+                    }
+                    window._cartDeliveryOptions = opts;
+                    window._cartSubtotal = total;
+                    updateDeliveryTotals(total, opts);
+                });
+        }
+
+        function updateDeliveryTotals(subtotal, opts) {
+            var slug = window._cartDeliverySlug || 'pickup';
+            var opt = (opts || window._cartDeliveryOptions || []).find(function(o){ return o.slug === slug; });
+            var cost = opt ? parseFloat(opt.cost) : 0;
+            var costRow = document.getElementById('cart-delivery-cost-row');
+            var costEl = document.getElementById('cart-delivery-cost');
+            var grandRow = document.getElementById('cart-grand-total-row');
+            var grandEl = document.getElementById('cart-grand-total');
+            if (costRow && costEl) {
+                if (cost > 0) {
+                    costRow.style.display = '';
+                    costEl.textContent = cost.toLocaleString('ru-RU') + ' ₽';
+                } else {
+                    costRow.style.display = 'none';
+                }
+            }
+            if (grandRow && grandEl) {
+                var grand = subtotal + cost;
+                grandRow.style.display = '';
+                grandEl.textContent = Math.round(grand).toLocaleString('ru-RU') + ' ₽';
+            }
+        }
 
         itemsEl.querySelectorAll('.ci-minus').forEach(function(btn){
             btn.addEventListener('click', function(){
@@ -159,7 +239,10 @@
                     'Content-Type': 'application/json',
                     'X-CSRFToken': '{{ csrf_token }}',
                 },
-                body: JSON.stringify({ items: Cart.getAll() }),
+                body: JSON.stringify({
+                    items: Cart.getAll(),
+                    delivery_option_slug: window._cartDeliverySlug || 'pickup'
+                }),
             })
             .then(function(r){ return r.json(); })
             .then(function(data){

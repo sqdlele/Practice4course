@@ -16,6 +16,7 @@ urlpatterns = [
     path('logout/', views.CustomerLogoutView.as_view(), name='logout'),
     path('register/', views.CustomerRegisterView.as_view(), name='register'),
     path('api/services/', views.api_services, name='api_services'),
+    path('api/delivery-options/', views.api_delivery_options, name='api_delivery_options'),
     path('api/order/', views.api_create_order, name='api_create_order'),
     path('api/chat/messages/', views.chat_messages, name='chat_messages'),
     path('api/chat/send/', views.chat_send, name='chat_send'),

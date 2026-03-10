@@ -36,16 +36,12 @@
 </section>
 {% endif %}
 
-{% if not user.is_authenticated %}
-<div class="guest-cta">
-    <a href="{% url 'customer:login' %}" class="btn btn-primary btn-lg">Войти</a>
-    <a href="{% url 'customer:register' %}" class="btn btn-ghost btn-lg">Регистрация</a>
-</div>
-{% endif %}
+<p class="home-intro">Закажите химчистку онлайн: выберите услуги, оформите заказ — мы заберём вещи и вернём их чистыми и аккуратными. Работаем с одеждой, домашним текстилем и изделиями из кожи.</p>
 
 <!-- Популярные услуги -->
 <section class="section" id="services">
     <h2 class="section-title">Популярные услуги</h2>
+    <p class="section-desc">Добавьте нужные позиции в корзину и перейдите к оформлению — укажите количество и при необходимости размеры или вес.</p>
     <div class="svc-list">
         {% for service in services %}
         <div class="svc-card" 
@@ -106,6 +102,7 @@
 {% if categories %}
 <section class="section" id="categories">
     <h2 class="section-title">Наши услуги</h2>
+    <p class="section-desc">Полный перечень услуг по категориям с ценами и сроками. Выберите категорию, чтобы увидеть все варианты.</p>
     <div class="home-cats">
         {% for cat in categories %}
         <div class="home-cat-block">
@@ -133,12 +130,13 @@
 <!-- Яндекс Карта — на всю ширину -->
 <section class="map-fullwidth" id="map-section">
     <h2 class="section-title">Где нас найти</h2>
+    <p class="section-desc">Мы находимся в Ижевске. Точный адрес и часы работы можно уточнить по телефону или в разделе контактов.</p>
     <script src="https://api-maps.yandex.ru/2.1/?lang=ru_RU" type="text/javascript"></script>
     <div id="yandex-map" style="width:100%;height:420px;"></div>
     <script>
 ymaps.ready(function(){
     var map = new ymaps.Map('yandex-map', {
-        center: [56.834926, 53.234687],
+        center: [56.835609, 53.233697],
         zoom: 15,
         controls: ['zoomControl'],
         behaviors: ['drag', 'dblClickZoom', 'multiTouch']
@@ -146,7 +144,7 @@ ymaps.ready(function(){
     
     map.container.fitToViewport(); 
 
-    map.geoObjects.add(new ymaps.Placemark([56.834926, 53.234687], {
+    map.geoObjects.add(new ymaps.Placemark([56.835609, 53.233697], {
         balloonContent: 'Чисто.Тут — мы здесь!'
     }, {
         preset: 'islands#blueCleaningIcon'
@@ -157,28 +155,37 @@ ymaps.ready(function(){
 
 <!-- Отзывы -->
 {% if reviews %}
-<section class="section" id="reviews-section">
+<section class="section reviews-section" id="reviews-section">
     <h2 class="section-title">Отзывы наших клиентов</h2>
+    <p class="section-desc">Что говорят те, кто уже пользовался нашими услугами.</p>
     <div class="reviews-carousel" id="reviews-carousel">
         <div class="reviews-track" id="reviews-track">
             {% for review in reviews %}
             <div class="review-card">
-                <div class="review-rating">
-                    {% for i in "12345" %}
-                        {% if forloop.counter <= review.rating %}
-                            <span class="star filled">★</span>
-                        {% else %}
-                            <span class="star">★</span>
-                        {% endif %}
-                    {% endfor %}
+                <div class="review-card-inner">
+                    <div class="review-rating" aria-label="Оценка: {{ review.rating }} из 5">
+                        {% for i in "12345" %}
+                            {% if forloop.counter <= review.rating %}
+                                <span class="star filled">★</span>
+                            {% else %}
+                                <span class="star">★</span>
+                            {% endif %}
+                        {% endfor %}
+                    </div>
+                    <blockquote class="review-text">{{ review.text }}</blockquote>
+                    <footer class="review-footer">
+                        <span class="review-avatar" aria-hidden="true">{{ review.author_name|slice:":1" }}</span>
+                        <div class="review-meta">
+                            <span class="review-author">{{ review.author_name }}</span>
+                            <time class="review-date" datetime="{{ review.created_at|date:'c' }}">{{ review.created_at|date:'j E Y' }}</time>
+                        </div>
+                    </footer>
                 </div>
-                <p class="review-text">{{ review.text }}</p>
-                <span class="review-author">{{ review.author_name }}</span>
             </div>
             {% endfor %}
         </div>
-        <button class="slider-btn reviews-prev" id="reviews-prev">&lsaquo;</button>
-        <button class="slider-btn reviews-next" id="reviews-next">&rsaquo;</button>
+        <button type="button" class="slider-btn reviews-prev" id="reviews-prev" aria-label="Предыдущий отзыв">&lsaquo;</button>
+        <button type="button" class="slider-btn reviews-next" id="reviews-next" aria-label="Следующий отзыв">&rsaquo;</button>
     </div>
 </section>
 {% endif %}

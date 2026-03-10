@@ -56,6 +56,9 @@
                     <a href="{% url 'customer:account' %}" class="c-header-user">
                         <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
                         <span>{{ user.first_name|default:user.phone }}</span>
+                        {% if has_discount_3 %}
+                        <span class="c-header-discount-badge" title="Скидка 3% на каждый заказ">−3%</span>
+                        {% endif %}
                     </a>
                     <form action="{% url 'customer:logout' %}" method="post" class="logout-form">
                         {% csrf_token %}
@@ -191,8 +194,10 @@
         });
 
         function addMessage(msg) {
+            if (msg.id !== undefined && body.querySelector(`[data-msg-id="${msg.id}"]`)) return;
             const div = document.createElement('div');
             div.className = 'chat-msg ' + (msg.is_staff ? 'chat-msg-staff' : 'chat-msg-user');
+            if (msg.id !== undefined) div.setAttribute('data-msg-id', msg.id);
             div.innerHTML = `<span class="chat-msg-text">${escapeHtml(msg.text)}</span><span class="chat-msg-time">${msg.time}</span>`;
             body.appendChild(div);
             body.scrollTop = body.scrollHeight;
@@ -249,8 +254,11 @@
                     if (isOpen) addMessage(m);
                     if (m.id > lastId) lastId = m.id;
                 });
+                if (data.messages.length && data.messages.some(m => m.id === 0 || m.id === '0')) {
+                    lastId = Math.max(lastId, 1);
+                }
                 if (!isOpen) {
-                    const staffMsgs = data.messages.filter(m => m.is_staff);
+                    const staffMsgs = data.messages.filter(m => m.is_staff && m.id !== 0 && m.id !== '0');
                     if (staffMsgs.length) {
                         const cur = parseInt(badge.textContent) || 0;
                         badge.textContent = cur + staffMsgs.length;

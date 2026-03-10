@@ -6,7 +6,7 @@
     <h1 class="auth-title">Регистрация</h1>
     <p class="auth-subtitle">Создайте аккаунт клиента</p>
 
-    <form method="post" class="auth-form">
+    <form method="post" class="auth-form" id="register-form">
         {% csrf_token %}
         {% if form.non_field_errors %}
             <ul class="form-errors">
@@ -16,11 +16,14 @@
             </ul>
         {% endif %}
         {% for field in form %}
-            <div class="form-group">
+            <div class="form-group" {% if field.name in 'last_name,first_name,patronymic' %}data-fio-field="{{ field.name }}"{% endif %}>
                 <label for="{{ field.id_for_label }}">{{ field.label }}</label>
                 {{ field }}
                 {% if field.errors %}
                     <span class="field-error">{{ field.errors.0 }}</span>
+                {% endif %}
+                {% if field.name in 'last_name,first_name,patronymic' %}
+                    <span class="field-error field-error-live" id="error-{{ field.name }}" aria-live="polite"></span>
                 {% endif %}
                 {% if field.help_text %}
                     <span class="help-text">{{ field.help_text }}</span>
@@ -34,4 +37,71 @@
         Уже есть аккаунт? <a href="{% url 'customer:login' %}">Войти</a>
     </p>
 </div>
+
+<script>
+(function() {
+    var form = document.getElementById('register-form');
+    if (!form) return;
+    var fioNames = ['last_name', 'first_name', 'patronymic'];
+    var digitRe = /[0-9]/g;
+
+    function showError(name, message) {
+        var el = document.getElementById('error-' + name);
+        if (el) {
+            el.textContent = message || '';
+            el.style.display = message ? 'block' : 'none';
+        }
+    }
+
+    function validateFio(name) {
+        var input = form.querySelector('[name="' + name + '"]');
+        if (!input) return true;
+        var val = input.value;
+        if (!val.trim()) {
+            showError(name, '');
+            return true;
+        }
+        if (digitRe.test(val)) {
+            showError(name, 'В поле не должно быть цифр.');
+            return false;
+        }
+        showError(name, '');
+        return true;
+    }
+
+    fioNames.forEach(function(name) {
+        var input = form.querySelector('[name="' + name + '"]');
+        if (!input) return;
+        input.addEventListener('input', function() {
+            var before = this.value;
+            var after = before.replace(digitRe, '');
+            if (after !== before) {
+                this.value = after;
+                showError(name, 'В поле не должно быть цифр.');
+            } else {
+                showError(name, '');
+            }
+        });
+        input.addEventListener('blur', function() {
+            validateFio(name);
+        });
+    });
+
+    form.addEventListener('submit', function(e) {
+        var valid = true;
+        fioNames.forEach(function(name) {
+            if (!validateFio(name)) valid = false;
+        });
+        if (!valid) {
+            e.preventDefault();
+            var firstErr = form.querySelector('.field-error-live[id^="error-"]');
+            if (firstErr && firstErr.textContent) {
+                var fieldName = firstErr.id.replace('error-', '');
+                var input = form.querySelector('[name="' + fieldName + '"]');
+                if (input) input.focus();
+            }
+        }
+    });
+})();
+</script>
 {% endblock %}

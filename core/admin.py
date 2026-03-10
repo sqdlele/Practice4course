@@ -2,7 +2,7 @@ from django.contrib import admin
 from django.contrib.auth.admin import UserAdmin as BaseUserAdmin
 from django.contrib.auth import get_user_model
 
-from .models import Client, Order, Service, ServiceCategory, OrderItem, HeroBanner, Review
+from .models import Client, Order, Service, ServiceCategory, OrderItem, HeroBanner, Review, AboutPage, AboutFeature, AboutStep, DeliveryOption
 
 User = get_user_model()
 
@@ -50,6 +50,23 @@ class ReviewAdmin(admin.ModelAdmin):
     list_display = ('author_name', 'rating', 'created_at')
 
 
+@admin.register(AboutPage)
+class AboutPageAdmin(admin.ModelAdmin):
+    list_display = ('hero_title', 'years_experience')
+
+
+@admin.register(AboutFeature)
+class AboutFeatureAdmin(admin.ModelAdmin):
+    list_display = ('title', 'order')
+    list_editable = ('order',)
+
+
+@admin.register(AboutStep)
+class AboutStepAdmin(admin.ModelAdmin):
+    list_display = ('step_number', 'title', 'order')
+    list_editable = ('order',)
+
+
 @admin.register(Client)
 class ClientAdmin(admin.ModelAdmin):
     list_display = ('name', 'phone')
@@ -64,11 +81,17 @@ class OrderItemInline(admin.TabularInline):
 
 @admin.register(Order)
 class OrderAdmin(admin.ModelAdmin):
-    list_display = ('id', 'client', 'status', 'discount_percent', 'ready_by', 'created_at')
+    list_display = ('id', 'client', 'status', 'discount_percent', 'delivery_option', 'delivery_cost', 'ready_by', 'created_at')
     list_filter = ('status',)
     search_fields = ('client__name', 'client__phone')
     date_hierarchy = 'ready_by'
     inlines = [OrderItemInline]
+
+
+@admin.register(DeliveryOption)
+class DeliveryOptionAdmin(admin.ModelAdmin):
+    list_display = ('name', 'slug', 'base_price', 'free_if_order_total_above', 'free_kg', 'extra_per_kg', 'order')
+    list_editable = ('base_price', 'free_if_order_total_above', 'free_kg', 'extra_per_kg', 'order')
 
 
 @admin.action(description='Подтвердить (разрешить вход)')

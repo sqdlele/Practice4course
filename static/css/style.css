@@ -91,6 +91,17 @@ body {
     background: var(--bg);
 }
 
+.btn-outline {
+    background: transparent;
+    color: var(--primary);
+    border: 1px solid var(--primary);
+}
+.btn-outline:hover {
+    background: rgba(13, 148, 136, 0.08);
+    color: var(--primary-dark);
+    border-color: var(--primary-dark);
+}
+
 .logout-form {
     display: inline;
     margin: 0;
@@ -353,3 +364,125 @@ body {
 .svc-extra-fields { display: flex; gap: 1rem; flex-wrap: wrap; padding: 0.5rem 0 0.5rem 1.75rem; }
 .svc-extra-fields label { font-size: 0.85rem; display: flex; align-items: center; gap: 0.35rem; }
 .form-input-sm { width: 70px; padding: 0.35rem 0.5rem; font-size: 0.88rem; }
+
+/* Новый заказ — услуги по категориям */
+.form-section-services .section-desc { margin-bottom: 0.5rem; }
+.order-create-hint {
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    margin-bottom: 1rem;
+    overflow: hidden;
+    background: #f8fafc;
+}
+.order-create-hint-toggle {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    width: 100%;
+    padding: 0.5rem 0.75rem;
+    border: none;
+    background: none;
+    font-family: inherit;
+    font-size: 0.9rem;
+    color: var(--text-muted);
+    cursor: pointer;
+    text-align: left;
+    transition: background .15s, color .15s;
+}
+.order-create-hint-toggle:hover { background: var(--border); color: var(--text); }
+.order-create-hint-arrow {
+    font-size: 0.65rem;
+    transition: transform .2s;
+}
+.order-create-hint.is-open .order-create-hint-arrow { transform: rotate(90deg); }
+.order-create-hint-body {
+    padding: 0.75rem 1rem;
+    border-top: 1px solid var(--border);
+    font-size: 0.85rem;
+    color: var(--text);
+    line-height: 1.5;
+}
+.order-create-hint-body[aria-hidden="true"] { display: none; }
+.order-create-hint-body p { margin: 0 0 0.5rem; }
+.order-create-hint-body p:last-child { margin-bottom: 0; }
+.order-create-hint-body ul { margin: 0.25rem 0 0 1rem; padding: 0; }
+.order-create-hint-body li { margin-bottom: 0.25rem; }
+
+.service-categories { margin-bottom: 1rem; }
+.service-category-block { border: 1px solid var(--border); border-radius: 8px; margin-bottom: 0.5rem; overflow: hidden; }
+.service-category-block:last-child { margin-bottom: 0; }
+.service-category-toggle {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    width: 100%;
+    padding: 0.75rem 1rem;
+    border: none;
+    background: var(--bg);
+    font-family: inherit;
+    font-size: 1rem;
+    font-weight: 600;
+    color: var(--text);
+    cursor: pointer;
+    text-align: left;
+    transition: background .15s;
+}
+.service-category-toggle:hover { background: #e8eeef; }
+.service-category-arrow {
+    font-size: 0.7rem;
+    color: var(--text-muted);
+    transition: transform .2s;
+}
+.service-category-block.is-collapsed .service-category-arrow { transform: rotate(-90deg); }
+.service-category-body {
+    padding: 0.75rem 1rem 1rem;
+    background: var(--surface);
+    max-height: 14rem;
+    overflow-y: auto;
+}
+.service-category-body[aria-hidden="true"] { display: none; }
+.service-group { margin-bottom: 1rem; }
+.service-group:last-child { margin-bottom: 0; }
+.service-group-title {
+    font-size: 0.9rem;
+    font-weight: 600;
+    color: var(--text-muted);
+    margin-bottom: 0.5rem;
+    padding-left: 0.25rem;
+}
+.service-items-list { list-style: none; padding: 0; margin: 0; }
+.svc-row {
+    border-bottom: 1px solid var(--border);
+    padding: 0.5rem 0;
+}
+.svc-row:last-child { border-bottom: none; }
+.svc-row-main {
+    display: flex;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: 0.5rem 1rem;
+    cursor: pointer;
+}
+.svc-row-main input[type="checkbox"] { flex-shrink: 0; }
+.svc-name { font-weight: 500; }
+.svc-price { color: var(--primary); font-weight: 600; white-space: nowrap; }
+.svc-time { color: var(--text-muted); font-size: 0.85rem; }
+.svc-params {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(180px, 1fr));
+    gap: 0.75rem 1.25rem;
+    margin-top: 0.5rem;
+    padding-left: 1.75rem;
+    padding-top: 0.5rem;
+    border-top: 1px dashed var(--border);
+}
+.svc-param-row {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    min-width: 0;
+}
+.svc-param-row label { font-size: 0.85rem; color: var(--text-muted); white-space: nowrap; margin: 0; flex-shrink: 0; }
+.svc-param-row .form-input-sm { width: 4.5rem; min-width: 4.5rem; flex-shrink: 0; }
+.svc-param-row select.form-input-sm { width: auto; min-width: 4.5rem; }
+.form-group-ready { margin-top: 1rem; }

@@ -176,6 +176,152 @@ class Review(models.Model):
         return f"{self.author_name} — {self.rating}★"
 
 
+class AboutPage(models.Model):
+    """Контент страницы «О нас» (одна запись)."""
+    hero_badge = models.CharField('Бейдж в герое', max_length=100, default='С 2020 года', blank=True)
+    hero_title = models.CharField('Заголовок героя', max_length=200, default='Мы — Чисто.Тут', blank=True)
+    hero_subtitle = models.TextField(
+        'Подзаголовок героя',
+        default='Профессиональная химчистка в Ижевске. Возвращаем вещам первозданный вид с заботой и вниманием к каждой детали.',
+        blank=True,
+    )
+    years_experience = models.PositiveIntegerField('Лет опыта (в цифрах)', default=5)
+    story_title = models.CharField('Заголовок блока «История»', max_length=200, default='Наша история', blank=True)
+    story_para1 = models.TextField(
+        'История, абзац 1',
+        default='«Чисто.Тут» начиналась как небольшая мастерская с одним сотрудником и мечтой — сделать химчистку доступной, честной и по-настоящему качественной. Сегодня мы обслуживаем тысячи клиентов по всему Ижевску.',
+        blank=True,
+    )
+    story_para2 = models.TextField(
+        'История, абзац 2',
+        default='Мы используем только профессиональное оборудование ведущих европейских производителей и экологичные составы, которые бережно очищают ткань, сохраняя её цвет, текстуру и форму.',
+        blank=True,
+    )
+    story_para3 = models.TextField(
+        'История, абзац 3',
+        default='Каждый заказ проходит тройной контроль качества — от приёмки до выдачи. Мы не отдаём вещь, пока не будем на 100% уверены в результате.',
+        blank=True,
+    )
+    story_rating_text = models.CharField('Текст «Рейтинг» в карточке', max_length=100, default='Рейтинг 4.9', blank=True)
+    story_guarantee_text = models.CharField('Текст «Гарантия» в карточке', max_length=200, default='Гарантия на все работы', blank=True)
+    cta_title = models.CharField('Заголовок CTA', max_length=200, default='Доверьте нам свои вещи', blank=True)
+    cta_text = models.CharField('Текст CTA', max_length=300, default='Первый заказ — со скидкой. Попробуйте качество, которое говорит само за себя.', blank=True)
+    cta_phone = models.CharField('Телефон в CTA', max_length=50, default='8 (800) 123-45-67', blank=True)
+    free_delivery_from = models.DecimalField(
+        'Бесплатная доставка от (₽)',
+        max_digits=10,
+        decimal_places=0,
+        default=2000,
+        null=True,
+        blank=True,
+        help_text='Подставляется в текст преимуществ',
+    )
+
+    class Meta:
+        verbose_name = 'страница «О нас»'
+        verbose_name_plural = 'страница «О нас»'
+
+    def __str__(self):
+        return 'О нас'
+
+    @classmethod
+    def get_single(cls):
+        obj = cls.objects.first()
+        if obj is None:
+            obj = cls.objects.create()
+        return obj
+
+
+class AboutFeature(models.Model):
+    """Пункт блока «Почему выбирают нас»."""
+    title = models.CharField('Заголовок', max_length=150)
+    description = models.TextField('Описание', blank=True)
+    order = models.PositiveIntegerField('Порядок', default=0)
+
+    class Meta:
+        verbose_name = 'преимущество (О нас)'
+        verbose_name_plural = 'преимущества (О нас)'
+        ordering = ['order', 'pk']
+
+    def __str__(self):
+        return self.title
+
+
+class AboutStep(models.Model):
+    """Шаг блока «Как мы работаем»."""
+    step_number = models.PositiveIntegerField('Номер шага', default=1)
+    title = models.CharField('Заголовок', max_length=150)
+    description = models.TextField('Описание', blank=True)
+    order = models.PositiveIntegerField('Порядок', default=0)
+
+    class Meta:
+        verbose_name = 'шаг процесса (О нас)'
+        verbose_name_plural = 'шаги процесса (О нас)'
+        ordering = ['order', 'pk']
+
+    def __str__(self):
+        return f'{self.step_number}. {self.title}'
+
+
+class DeliveryOption(models.Model):
+    """Способ получения заказа: самовывоз или доставка."""
+    name = models.CharField('Название', max_length=100)
+    slug = models.SlugField('Slug', max_length=20, unique=True, help_text='pickup или delivery')
+    base_price = models.DecimalField(
+        'Базовая стоимость (₽)',
+        max_digits=10,
+        decimal_places=2,
+        default=Decimal('0'),
+        help_text='Для доставки — от 300 ₽',
+    )
+    free_if_order_total_above = models.DecimalField(
+        'Бесплатно при заказе от (₽)',
+        max_digits=10,
+        decimal_places=0,
+        null=True,
+        blank=True,
+        help_text='Если сумма заказа выше — доставка бесплатно. Пусто для самовывоза.',
+    )
+    free_kg = models.DecimalField(
+        'Бесплатно вес до (кг)',
+        max_digits=6,
+        decimal_places=2,
+        default=Decimal('5'),
+        help_text='Доплата за вес считается после этого порога.',
+    )
+    extra_per_kg = models.DecimalField(
+        'Доплата за каждый кг сверх порога (₽)',
+        max_digits=6,
+        decimal_places=2,
+        default=Decimal('20'),
+    )
+    order = models.PositiveIntegerField('Порядок', default=0)
+
+    class Meta:
+        verbose_name = 'способ получения'
+        verbose_name_plural = 'способы получения'
+        ordering = ['order', 'pk']
+
+    def __str__(self):
+        return self.name
+
+    def compute_cost(self, order_total, total_kg=None):
+        """
+        Стоимость доставки: базовая цена (или 0 при заказе от N ₽)
+        + доплата за вес сверх free_kg по extra_per_kg за кг.
+        """
+        if self.slug == 'pickup':
+            return Decimal('0')
+        total_kg = total_kg or Decimal('0')
+        if self.free_if_order_total_above and order_total >= self.free_if_order_total_above:
+            base = Decimal('0')
+        else:
+            base = self.base_price
+        over_kg = max(Decimal('0'), total_kg - self.free_kg)
+        extra = (over_kg * self.extra_per_kg).quantize(Decimal('0.01'))
+        return (base + extra).quantize(Decimal('0.01'))
+
+
 class Order(models.Model):
     """Заказ. Статусы по ТЗ: Принято → В чистке → Готово → Выдано."""
     STATUS_ACCEPTED = 'accepted'
@@ -200,6 +346,20 @@ class Order(models.Model):
         decimal_places=2,
         default=0,
     )
+    delivery_option = models.ForeignKey(
+        'DeliveryOption',
+        on_delete=models.PROTECT,
+        null=True,
+        blank=True,
+        related_name='orders',
+        verbose_name='Способ получения',
+    )
+    delivery_cost = models.DecimalField(
+        'Стоимость доставки (₽)',
+        max_digits=10,
+        decimal_places=2,
+        default=Decimal('0'),
+    )
 
     class Meta:
         verbose_name = 'заказ'
@@ -210,11 +370,16 @@ class Order(models.Model):
         return f"Заказ #{self.pk} — {self.client.name}"
 
     def get_total(self):
-        """Итог с учётом сложности (per-item), объёма/веса и скидки."""
-        total = sum(item.get_line_total() for item in self.items.all())
-        if self.discount_percent:
-            total *= (Decimal('100') - self.discount_percent) / Decimal('100')
-        return total.quantize(Decimal('0.01'))
+        """Итог: сумма по позициям с учётом скидки + доставка."""
+        total = sum(item.get_line_total(self.discount_percent) for item in self.items.all())
+        total = Decimal(total).quantize(Decimal('0.01'))
+        delivery = self.delivery_cost or Decimal('0')
+        return (total + delivery).quantize(Decimal('0.01'))
+
+    def get_subtotal(self):
+        """Сумма по позициям без доставки (для расчёта стоимости доставки)."""
+        total = sum(item.get_line_total(self.discount_percent) for item in self.items.all())
+        return Decimal(total).quantize(Decimal('0.01'))
 
 
 class OrderItem(models.Model):
@@ -252,5 +417,9 @@ class OrderItem(models.Model):
             return self.weight
         return Decimal('1')
 
-    def get_line_total(self):
-        return (self.unit_price * self.quantity * self.get_multiplier() * self.complexity).quantize(Decimal('0.01'))
+    def get_line_total(self, discount_percent=None):
+        """Сумма по позиции. Если передан discount_percent (скидка заказчика), применяется к этой вещи."""
+        total = (self.unit_price * self.quantity * self.get_multiplier() * self.complexity).quantize(Decimal('0.01'))
+        if discount_percent is not None and discount_percent > 0:
+            total = (total * (Decimal('100') - discount_percent) / Decimal('100')).quantize(Decimal('0.01'))
+        return total
