@@ -360,6 +360,151 @@ def api_web_orders_count(request):
 
 
 @login_required
+def finance(request):
+    """Страница финансов для сотрудников: выручка за месяц, налог 13%, прогноз."""
+    if not request.user.is_staff:
+        from django.http import HttpResponseForbidden
+        return HttpResponseForbidden('Доступ только для сотрудников.')
+    context = _get_finance_context(request)
+    return render(request, 'core/finance.html', context)
+
+
+def _get_finance_context(request):
+    """Общая логика расчёта финансов — используется и в панели сотрудника, и в админке."""
+    from calendar import monthrange
+    from datetime import date
+
+    today = timezone.localdate()
+    year = request.GET.get('year')
+    month = request.GET.get('month')
+    period = request.GET.get('period', '').strip()
+    if period:
+        try:
+            y, m = period.split('-')
+            year, month = int(y), int(m)
+            if month < 1 or month > 12:
+                year, month = today.year, today.month
+        except (ValueError, TypeError):
+            year, month = today.year, today.month
+    else:
+        try:
+            year = int(year) if year else today.year
+            month = int(month) if month else today.month
+            if month < 1 or month > 12:
+                year, month = today.year, today.month
+        except (TypeError, ValueError):
+            year, month = today.year, today.month
+
+    start = date(year, month, 1)
+    _, last_day = monthrange(year, month)
+    end = date(year, month, last_day)
+
+    period_months = request.GET.get('period_months', '1').strip()
+    try:
+        period_months = int(period_months)
+        if period_months < 1:
+            period_months = 1
+        elif period_months > 12:
+            period_months = 12
+    except (ValueError, TypeError):
+        period_months = 1
+
+    # Конец периода: start + (period_months - 1) месяцев
+    end_month = month + period_months - 1
+    end_year = year + (end_month - 1) // 12
+    end_month = ((end_month - 1) % 12) + 1
+    _, last_day_end = monthrange(end_year, end_month)
+    end = date(end_year, end_month, last_day_end)
+
+    orders_issued_in_month = list(Order.objects.filter(
+        status=Order.STATUS_ISSUED,
+        created_at__date__gte=start,
+        created_at__date__lte=end,
+    ).prefetch_related('items__service'))
+
+    month_revenue = sum(o.get_total() for o in orders_issued_in_month)
+    tax_rate = Decimal('0.13')
+    month_tax = (month_revenue * tax_rate).quantize(Decimal('0.01'))
+    month_net = (month_revenue - month_tax).quantize(Decimal('0.01'))
+    orders_count_issued = len(orders_issued_in_month)
+
+    # Ожидаемая выручка по незавершённым заказам (в работе)
+    orders_in_work = list(Order.objects.filter(
+        status__in=[Order.STATUS_ACCEPTED, Order.STATUS_IN_PROGRESS, Order.STATUS_READY],
+    ).prefetch_related('items__service'))
+    forecast_revenue = sum(o.get_total() for o in orders_in_work)
+    forecast_tax = (forecast_revenue * tax_rate).quantize(Decimal('0.01'))
+    orders_count_forecast = len(orders_in_work)
+
+    months_choices = []
+    d = today.replace(day=1)
+    for _ in range(12):
+        months_choices.append({
+            'year': d.year,
+            'month': d.month,
+            'label': d.strftime('%m.%Y'),
+        })
+        if d.month == 1:
+            d = d.replace(year=d.year - 1, month=12)
+        else:
+            d = d.replace(month=d.month - 1)
+
+    month_names = [
+        (1, 'Январь'), (2, 'Февраль'), (3, 'Март'), (4, 'Апрель'),
+        (5, 'Май'), (6, 'Июнь'), (7, 'Июль'), (8, 'Август'),
+        (9, 'Сентябрь'), (10, 'Октябрь'), (11, 'Ноябрь'), (12, 'Декабрь'),
+    ]
+    years_choices = list(range(today.year, today.year - 5, -1))  # текущий и 4 прошлых года
+
+    period_choices = [
+        (1, '1 месяц'),
+        (2, '2 месяца'),
+        (3, '3 месяца'),
+        (6, '6 месяцев'),
+        (12, '12 месяцев (год)'),
+    ]
+
+    month_label = date(year, month, 1).strftime('%m.%Y')
+    period_end_label = date(end_year, end_month, 1).strftime('%m.%Y')
+    if period_months == 1:
+        period_label = month_label
+    else:
+        period_label = f'{month_label} – {period_end_label}'
+
+    return {
+        'year': year,
+        'month': month,
+        'month_label': month_label,
+        'period_months': period_months,
+        'period_label': period_label,
+        'months_choices': months_choices,
+        'month_choices': month_names,
+        'years_choices': years_choices,
+        'period_choices': period_choices,
+        'month_revenue': month_revenue,
+        'month_tax': month_tax,
+        'month_net': month_net,
+        'orders_count_issued': orders_count_issued,
+        'tax_percent': 13,
+        'forecast_revenue': forecast_revenue,
+        'forecast_tax': forecast_tax,
+        'orders_count_forecast': orders_count_forecast,
+    }
+
+
+def finance_admin(request):
+    """Финансы в админке — те же данные, шаблон в стиле Django Admin."""
+    if not request.user.is_staff:
+        from django.http import HttpResponseForbidden
+        return HttpResponseForbidden('Доступ только для сотрудников.')
+    context = _get_finance_context(request)
+    context['title'] = 'Финансы и налоги'
+    context['site_title'] = 'Чисто.Тут'
+    context['site_header'] = 'Администрирование Чисто.Тут'
+    return render(request, 'admin/finance.html', context)
+
+
+@login_required
 def staff_chat_list(request):
     """Список активных чатов для сотрудника."""
     rooms = ChatRoom.objects.select_related('user').order_by('-created_at')

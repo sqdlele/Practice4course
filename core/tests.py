@@ -521,6 +521,36 @@ class ApiWebOrdersCountTest(TestCase):
         self.assertEqual(data['count'], 2)
 
 
+# --------------- Finance (staff) ---------------
+
+class FinanceViewTest(TestCase):
+    def setUp(self):
+        self.staff = make_user()
+        self.client.force_login(self.staff)
+
+    def test_finance_requires_staff(self):
+        self.staff.is_staff = False
+        self.staff.save()
+        resp = self.client.get(reverse('core:finance'))
+        self.assertEqual(resp.status_code, 403)
+
+    def test_finance_200(self):
+        resp = self.client.get(reverse('core:finance'))
+        self.assertEqual(resp.status_code, 200)
+        self.assertIn('month_revenue', resp.context)
+        self.assertIn('month_tax', resp.context)
+        self.assertIn('month_net', resp.context)
+        self.assertIn('tax_percent', resp.context)
+        self.assertIn('months_choices', resp.context)
+        self.assertEqual(resp.context['tax_percent'], 13)
+
+    def test_finance_period_param(self):
+        resp = self.client.get(reverse('core:finance'), {'period': '2025-6'})
+        self.assertEqual(resp.status_code, 200)
+        self.assertEqual(resp.context['year'], 2025)
+        self.assertEqual(resp.context['month'], 6)
+
+
 # --------------- Staff Register ---------------
 
 class StaffRegisterViewTest(TestCase):

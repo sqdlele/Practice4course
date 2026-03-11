@@ -47,7 +47,8 @@ class HeroBannerAdmin(admin.ModelAdmin):
 
 @admin.register(Review)
 class ReviewAdmin(admin.ModelAdmin):
-    list_display = ('author_name', 'rating', 'created_at')
+    list_display = ('author_name', 'rating', 'order', 'created_at')
+    list_filter = ('rating',)
 
 
 @admin.register(AboutPage)

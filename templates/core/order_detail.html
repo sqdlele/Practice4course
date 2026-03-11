@@ -17,7 +17,7 @@
             <p>{{ order.client.phone }}</p>
             <p class="od-muted">Способ сдачи: {{ order.get_pickup_method_display }}{% if order.courier_address %} — {{ order.courier_address }}{% endif %}</p>
             {% if order.pickup_cost %}
-            <p class="od-muted">Забор вещей: +{{ order.pickup_cost }} ₽</p>
+            <p class="od-muted">Прием вещей: +{{ order.pickup_cost }} ₽</p>
             {% endif %}
             {% if order.payment_method %}
             <p class="od-muted">Оплата: {{ order.get_payment_method_display }}</p>
@@ -114,7 +114,7 @@
         </div>
         {% if order.pickup_cost %}
         <div class="od-total-row">
-            <span>Забор вещей:</span>
+            <span>Прием вещей:</span>
             <strong>{{ order.pickup_cost }} ₽</strong>
         </div>
         {% endif %}

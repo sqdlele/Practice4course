@@ -22,7 +22,7 @@ from reportlab.pdfbase import pdfmetrics
 from reportlab.pdfbase.ttfonts import TTFont
 
 from .models import ChatRoom, ChatMessage
-from .forms import CustomerRegisterForm, CustomerProfileForm
+from .forms import CustomerRegisterForm, CustomerProfileForm, OrderReviewForm
 from core.models import Service, ServiceCategory, HeroBanner, Review, Client, Order, OrderItem, AboutPage, AboutFeature, AboutStep, DeliveryOption
 
 
@@ -204,6 +204,7 @@ def account(request):
             defaults={'name': user.get_full_name() or user.phone},
         )
     orders = Order.objects.filter(client=client).select_related('client', 'delivery_option').prefetch_related('items__service').order_by('-created_at')[:50] if client else []
+    order_ids_with_review = set(Review.objects.filter(order__client=client).values_list('order_id', flat=True)) if client else set()
 
     if request.method == 'POST':
         form = CustomerProfileForm(request.POST, instance=user)
@@ -217,6 +218,7 @@ def account(request):
     return render(request, 'customer/account.html', {
         'client': client,
         'orders': orders,
+        'order_ids_with_review': order_ids_with_review,
         'profile_form': form,
     })
 
@@ -400,6 +402,38 @@ def order_complete(request, pk):
     })
 
 
+@login_required
+def order_review(request, pk):
+    """Оставить отзыв по выданному заказу (доступно после статуса «Выдано»)."""
+    from django.contrib import messages
+    order = _order_for_user(request.user, pk)
+    if order is None:
+        return HttpResponse('Клиент не найден', status=404)
+    if order.status != Order.STATUS_ISSUED:
+        messages.warning(request, 'Отзыв можно оставить только по заказу со статусом «Выдано».')
+        return redirect('customer:account')
+    if Review.objects.filter(order=order).exists():
+        messages.info(request, 'Вы уже оставили отзыв по этому заказу.')
+        return redirect('customer:account')
+
+    form = OrderReviewForm(request.POST or None)
+    if request.method == 'POST' and form.is_valid():
+        author_name = request.user.get_full_name() or request.user.phone or 'Клиент'
+        Review.objects.create(
+            order=order,
+            author_name=author_name.strip() or 'Клиент',
+            text=form.cleaned_data['text'].strip(),
+            rating=form.cleaned_data['rating'],
+        )
+        messages.success(request, 'Спасибо! Ваш отзыв опубликован.')
+        return redirect('customer:account')
+
+    return render(request, 'customer/order_review.html', {
+        'order': order,
+        'form': form,
+    })
+
+
 @require_POST
 @login_required
 def api_request_return_delivery(request, pk):
@@ -569,7 +603,7 @@ def order_receipt_pdf(request, pk):
     y -= 5 * mm
 
     if order.pickup_cost and order.pickup_cost > 0:
-        text(right_edge - 80 * mm, y, 'Забор вещей курьером:', 9)
+        text(right_edge - 80 * mm, y, 'Прием вещей курьером:', 9)
         text_right(right_edge, y, f'{order.pickup_cost} ₽', 9)
         y -= 5 * mm
 

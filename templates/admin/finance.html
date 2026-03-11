@@ -1,0 +1,54 @@
+{% extends "admin/base_site.html" %}
+{% load i18n %}
+
+{% block title %}{{ title }} | {{ site_title|default:_('Django site admin') }}{% endblock %}
+
+{% block content %}
+<div id="content-main" class="finance-admin">
+    <h1>{{ title }}</h1>
+
+    <form method="get" action="{% url 'admin_finance' %}" style="margin-bottom: 20px;">
+        <label for="finance-month">Месяц:</label>
+        <select name="month" id="finance-month">
+            {% for num, name in month_choices %}
+            <option value="{{ num }}" {% if num == month %}selected{% endif %}>{{ name }}</option>
+            {% endfor %}
+        </select>
+        <label for="finance-year">Год:</label>
+        <select name="year" id="finance-year">
+            {% for y in years_choices %}
+            <option value="{{ y }}" {% if y == year %}selected{% endif %}>{{ y }}</option>
+            {% endfor %}
+        </select>
+        <label for="finance-period-months">За период:</label>
+        <select name="period_months" id="finance-period-months">
+            {% for num, name in period_choices %}
+            <option value="{{ num }}" {% if num == period_months %}selected{% endif %}>{{ name }}</option>
+            {% endfor %}
+        </select>
+        <input type="submit" value="Показать" class="button">
+    </form>
+
+    <div class="module">
+        <h2>За выбранный период ({{ period_label }})</h2>
+        <table style="width: auto; min-width: 360px;">
+            <tr>
+                <td><strong>Выручка</strong> (заказы «Выдано»)</td>
+                <td><strong>{{ month_revenue|floatformat:2 }} ₽</strong></td>
+                <td style="color: #666;">заказов: {{ orders_count_issued }}</td>
+            </tr>
+            <tr>
+                <td>Налог {{ tax_percent }}%</td>
+                <td>− {{ month_tax|floatformat:2 }} ₽</td>
+                <td></td>
+            </tr>
+            <tr style="background: #7c7c7c;">
+                <td><strong>Чистыми за период</strong></td>
+                <td><strong>{{ month_net|floatformat:2 }} ₽</strong></td>
+                <td></td>
+            </tr>
+        </table>
+        <p style="margin-top: 12px;">После выдачи заказов в работе ожидается ещё <strong>{{ forecast_revenue|floatformat:2 }} ₽</strong> выручки и <strong>{{ forecast_tax|floatformat:2 }} ₽</strong> налога (незавершённые услуги: {{ orders_count_forecast }} заказов).</p>
+    </div>
+</div>
+{% endblock %}

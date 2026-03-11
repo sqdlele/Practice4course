@@ -27,7 +27,7 @@
                     <p><strong>Телефон:</strong> {{ order.client.phone }}</p>
                     <p><strong>Сдача:</strong> {{ order.get_pickup_method_display }}{% if order.courier_address %} — {{ order.courier_address }}{% endif %}</p>
                     {% if order.pickup_cost %}
-                    <p><strong>Забор вещей:</strong> {{ order.pickup_cost }} ₽</p>
+                    <p><strong>Прием вещей:</strong> {{ order.pickup_cost }} ₽</p>
                     {% endif %}
                     {% if order.payment_method %}
                     <p><strong>Оплата:</strong> {{ order.get_payment_method_display }}</p>

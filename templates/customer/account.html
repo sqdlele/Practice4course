@@ -106,7 +106,7 @@
                             <p class="account-order-ready"><span class="account-order-detail-label">Готовность:</span> {% if order.ready_by %}{{ order.ready_by|date:"d.m.Y" }}{% else %}—{% endif %}</p>
                             <p class="account-order-pickup"><span class="account-order-detail-label">Сдача вещей:</span> {{ order.get_pickup_method_display }}</p>
                             {% if order.pickup_cost %}
-                            <p class="account-order-delivery"><span class="account-order-detail-label">Забор вещей:</span> + {{ order.pickup_cost }} ₽</p>
+                            <p class="account-order-delivery"><span class="account-order-detail-label">Прием вещей:</span> + {{ order.pickup_cost }} ₽</p>
                             {% endif %}
                             {% if order.payment_method %}
                             <p class="account-order-delivery"><span class="account-order-detail-label">Оплата:</span> {{ order.get_payment_method_display }}</p>
@@ -142,6 +142,15 @@
                             </button>
                             {% elif order.return_delivery_requested %}
                             <span class="account-order-delivery-badge">Доставка оформлена</span>
+                            {% endif %}
+                            {% if order.status == 'issued' %}
+                            {% if order.pk in order_ids_with_review %}
+                            <span class="account-order-review-badge">Вы оставили отзыв</span>
+                            {% else %}
+                            <a href="{% url 'customer:order_review' order.pk %}" class="btn btn-sm btn-outline account-order-btn-review">
+                                Оставить отзыв
+                            </a>
+                            {% endif %}
                             {% endif %}
                         </div>
                     </div>

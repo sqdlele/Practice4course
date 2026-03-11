@@ -161,11 +161,20 @@ class HeroBanner(models.Model):
 
 
 class Review(models.Model):
-    """Отзыв клиента для главной страницы."""
+    """Отзыв клиента для главной страницы. Может быть привязан к заказу (после статуса «Выдано»)."""
     author_name = models.CharField('Имя автора', max_length=150)
     text = models.TextField('Текст отзыва')
     rating = models.PositiveSmallIntegerField('Оценка', default=5)
     created_at = models.DateTimeField('Дата', auto_now_add=True)
+    order = models.OneToOneField(
+        'Order',
+        null=True,
+        blank=True,
+        on_delete=models.SET_NULL,
+        related_name='review',
+        verbose_name='Заказ',
+        help_text='Если отзыв оставлен из личного кабинета по выданному заказу.',
+    )
 
     class Meta:
         verbose_name = 'отзыв'
@@ -344,13 +353,9 @@ class Order(models.Model):
     ]
     PAYMENT_CASH = 'cash'
     PAYMENT_CARD_ON_HAND = 'card_on_hand'
-    PAYMENT_CARD_ONLINE = 'card_online'
-    PAYMENT_SBP = 'sbp'
     PAYMENT_CHOICES = [
-        (PAYMENT_CASH, 'Наличкой курьеру/приемщику'),
-        (PAYMENT_CARD_ON_HAND, 'Картой курьеру/приемщику'),
-        (PAYMENT_CARD_ONLINE, 'Картой онлайн'),
-        (PAYMENT_SBP, 'СБП'),
+        (PAYMENT_CASH, 'Наличными курьеру или в пункте приёма'),
+        (PAYMENT_CARD_ON_HAND, 'Банковской картой курьеру или в пункте приёма'),
     ]
 
     SOURCE_WEB = 'web'
@@ -384,7 +389,7 @@ class Order(models.Model):
         default='',
     )
     pickup_cost = models.DecimalField(
-        'Стоимость забора вещей курьером (₽)',
+        'Стоимость Приема вещей курьером (₽)',
         max_digits=10,
         decimal_places=2,
         default=Decimal('0'),
@@ -430,7 +435,7 @@ class Order(models.Model):
         return f"Заказ #{self.pk} — {self.client.name}"
 
     def get_total(self):
-        """Итог: сумма по позициям с учётом скидки + забор вещей + доставка."""
+        """Итог: сумма по позициям с учётом скидки + Прием вещей + доставка."""
         total = sum(item.get_line_total(self.discount_percent) for item in self.items.all())
         total = Decimal(total).quantize(Decimal('0.01'))
         pickup = self.pickup_cost or Decimal('0')
@@ -438,7 +443,7 @@ class Order(models.Model):
         return (total + pickup + delivery).quantize(Decimal('0.01'))
 
     def get_subtotal(self):
-        """Сумма по позициям без забора и доставки."""
+        """Сумма по позициям без Приема и доставки."""
         total = sum(item.get_line_total(self.discount_percent) for item in self.items.all())
         return Decimal(total).quantize(Decimal('0.01'))
 

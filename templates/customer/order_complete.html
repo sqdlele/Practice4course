@@ -31,7 +31,7 @@
                     <p><span>Способ оплаты</span><strong>{{ order.get_payment_method_display }}</strong></p>
                     <p><span>Стоимость услуг</span><strong>{{ order.get_subtotal }} ₽</strong></p>
                     {% if order.pickup_cost %}
-                    <p><span>Забор вещей курьером</span><strong>{{ order.pickup_cost }} ₽</strong></p>
+                    <p><span>Прием вещей курьером</span><strong>{{ order.pickup_cost }} ₽</strong></p>
                     {% endif %}
                     <p><span>Итого по заказу</span><strong>{{ order.get_total }} ₽</strong></p>
                     <p><span>Первый взнос</span><strong>{{ prepayment_amount }} ₽</strong></p>

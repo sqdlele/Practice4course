@@ -83,3 +83,21 @@ class CustomerProfileForm(forms.ModelForm):
 
     def clean_patronymic(self):
         return self._clean_fio(self.cleaned_data.get('patronymic', ''))
+
+
+class OrderReviewForm(forms.Form):
+    """Форма отзыва по выданному заказу."""
+    RATING_CHOICES = [(i, str(i)) for i in range(1, 6)]
+    text = forms.CharField(
+        label='Текст отзыва',
+        widget=forms.Textarea(attrs={'class': 'form-input', 'rows': 4, 'placeholder': 'Расскажите, как прошла работа над заказом'}),
+        min_length=10,
+        max_length=2000,
+    )
+    rating = forms.TypedChoiceField(
+        label='Оценка',
+        choices=RATING_CHOICES,
+        coerce=int,
+        widget=forms.RadioSelect(attrs={'class': 'form-radio-group'}),
+        initial=5,
+    )

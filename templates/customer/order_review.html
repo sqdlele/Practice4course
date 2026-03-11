@@ -1,0 +1,89 @@
+{% extends 'customer/base.html' %}
+
+{% block title %}Отзыв по заказу #{{ order.pk }} — Чисто.Тут{% endblock %}
+
+{% block content %}
+<section class="checkout-page account-review-page">
+    <div class="breadcrumbs">
+        <a href="{% url 'customer:account' %}">Личный кабинет</a>
+        <span class="bc-sep">/</span>
+        <a href="#account-orders-list">Заказы</a>
+        <span class="bc-sep">/</span>
+        <span>Отзыв по заказу № {{ order.pk }}</span>
+    </div>
+
+    <div class="checkout-layout">
+        <div class="checkout-main">
+            <h1 class="section-title checkout-title">Оставить отзыв</h1>
+            <p class="checkout-lead account-review-lead">
+                Заказ № {{ order.pk }} выдан. Расскажите, как прошла работа — ваш отзыв поможет другим клиентам.
+            </p>
+
+            <form method="post" class="checkout-card account-review-form">
+                {% csrf_token %}
+                {% if form.non_field_errors %}
+                <ul class="form-errors">
+                    {% for err in form.non_field_errors %}
+                    <li class="form-error">{{ err }}</li>
+                    {% endfor %}
+                </ul>
+                {% endif %}
+
+                <div class="account-review-row account-review-rating-row">
+                    <span class="account-review-label">{{ form.rating.label }}</span>
+                    <div class="account-review-stars" id="{{ form.rating.id_for_label }}" role="group" aria-label="Оценка от 1 до 5">
+                        {% for choice in form.rating.field.widget.choices %}
+                        <label class="account-review-star-label">
+                            <input type="radio" name="{{ form.rating.name }}" value="{{ choice.0 }}" {% if form.rating.value == choice.0 %}checked{% endif %} class="account-review-star-input">
+                            <span class="account-review-star-icon" aria-hidden="true">
+                                <svg width="32" height="32" viewBox="0 0 24 24" fill="currentColor" xmlns="http://www.w3.org/2000/svg"><path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z"/></svg>
+                            </span>
+                            <span class="account-review-star-num">{{ choice.0 }}</span>
+                        </label>
+                        {% endfor %}
+                    </div>
+                    {% if form.rating.errors %}
+                    <span class="form-error">{{ form.rating.errors.0 }}</span>
+                    {% endif %}
+                </div>
+                <br>
+                <div class="account-review-row">
+                    <label for="{{ form.text.id_for_label }}" class="account-review-label">{{ form.text.label }}</label>
+                    <div class="account-review-text-wrap">
+                        {{ form.text }}
+                        
+                    </div>
+                    <br>
+                    <span class="account-review-hint">Минимум 10 символов</span>
+                    {% if form.text.errors %}
+                    <span class="form-error">{{ form.text.errors.0 }}</span>
+                    {% endif %}
+                </div>
+                <br>
+                <div class="account-review-actions">
+                    <button type="submit" class="btn btn-primary btn-lg account-review-submit">Отправить отзыв</button>
+                    <a href="{% url 'customer:account' %}" class="btn btn-outline">Отмена</a>
+                </div>
+            </form>
+        </div>
+
+        <aside class="checkout-sidebar">
+            <div class="checkout-card">
+                <h2 class="checkout-card-title">Заказ № {{ order.pk }}</h2>
+                <ul class="checkout-items">
+                    {% for item in order.items.all %}
+                    <li>
+                        <span>{{ item.service.name }} × {{ item.quantity }}</span>
+                        <strong>{{ item.line_total }} ₽</strong>
+                    </li>
+                    {% endfor %}
+                </ul>
+                <div class="checkout-summary-row checkout-summary-row--total">
+                    <span>Итого</span>
+                    <strong>{{ order.get_total }} ₽</strong>
+                </div>
+            </div>
+        </aside>
+    </div>
+</section>
+{% endblock %}

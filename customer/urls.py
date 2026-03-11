@@ -21,6 +21,7 @@ urlpatterns = [
     path('api/order/<int:pk>/request-delivery/', views.api_request_return_delivery, name='api_request_return_delivery'),
     path('order/<int:pk>/payment/', views.order_payment, name='order_payment'),
     path('order/<int:pk>/complete/', views.order_complete, name='order_complete'),
+    path('order/<int:pk>/review/', views.order_review, name='order_review'),
     path('order/<int:pk>/receipt/', views.order_receipt_pdf, name='order_receipt_pdf'),
     path('api/chat/messages/', views.chat_messages, name='chat_messages'),
     path('api/chat/send/', views.chat_send, name='chat_send'),

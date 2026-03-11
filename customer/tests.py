@@ -376,6 +376,39 @@ class ApiCreateOrderTest(TestCase):
         self.assertEqual(order.get_total(), Decimal('776.00'))
         self.assertEqual(order.get_prepayment_due(), Decimal('388.00'))
 
+    def test_api_create_order_no_discount_without_two_issued(self):
+        """Без 2 выданных заказов скидка 3% не применяется."""
+        client_obj, _ = Client.objects.get_or_create(
+            phone=self.user.phone, defaults={'name': 'Test'},
+        )
+        # 0 или 1 выданный заказ — скидки нет
+        resp = self.client.post(
+            reverse('customer:api_create_order'),
+            json.dumps({'items': [{'service_id': self.svc.pk, 'qty': 1}]}),
+            content_type='application/json',
+        )
+        order = Order.objects.get(pk=resp.json()['order_id'])
+        self.assertEqual(order.discount_percent, Decimal('0'))
+        self.assertEqual(order.get_total(), Decimal('800.00'))
+        self.assertEqual(Decimal(resp.json()['total']), Decimal('800.00'))
+        self.assertEqual(Decimal(resp.json()['prepayment_amount']), Decimal('400.00'))
+
+    def test_api_create_order_discount_reflected_in_response(self):
+        """Суммы в ответе API уже со скидкой 3%."""
+        client_obj, _ = Client.objects.get_or_create(
+            phone=self.user.phone, defaults={'name': 'Test'},
+        )
+        Order.objects.create(client=client_obj, status=Order.STATUS_ISSUED)
+        Order.objects.create(client=client_obj, status=Order.STATUS_ISSUED)
+        resp = self.client.post(
+            reverse('customer:api_create_order'),
+            json.dumps({'items': [{'service_id': self.svc.pk, 'qty': 1}]}),
+            content_type='application/json',
+        )
+        data = resp.json()
+        self.assertEqual(Decimal(data['total']), Decimal('776.00'))
+        self.assertEqual(Decimal(data['prepayment_amount']), Decimal('388.00'))
+
     def test_api_create_order_invalid_pickup_method_defaults(self):
         resp = self.client.post(
             reverse('customer:api_create_order'),
@@ -420,16 +453,16 @@ class OrderPaymentFlowTest(TestCase):
         resp = self.client.get(reverse('customer:order_payment', kwargs={'pk': self.order.pk}))
         self.assertEqual(resp.status_code, 200)
         self.assertContains(resp, 'Первый взнос')
-        self.assertContains(resp, 'Картой онлайн')
+        self.assertContains(resp, 'Банковской картой')
 
     def test_order_payment_post_saves_method_and_redirects(self):
         resp = self.client.post(
             reverse('customer:order_payment', kwargs={'pk': self.order.pk}),
-            {'payment_method': Order.PAYMENT_SBP},
+            {'payment_method': Order.PAYMENT_CARD_ON_HAND},
         )
         self.assertEqual(resp.status_code, 302)
         self.order.refresh_from_db()
-        self.assertEqual(self.order.payment_method, Order.PAYMENT_SBP)
+        self.assertEqual(self.order.payment_method, Order.PAYMENT_CARD_ON_HAND)
         self.assertEqual(self.order.prepayment_amount, Decimal('1000.00'))
 
     def test_order_complete_requires_selected_payment(self):
@@ -438,13 +471,75 @@ class OrderPaymentFlowTest(TestCase):
         self.assertIn(reverse('customer:order_payment', kwargs={'pk': self.order.pk}), resp.url)
 
     def test_order_complete_shows_receipt_after_payment(self):
-        self.order.payment_method = Order.PAYMENT_CARD_ONLINE
+        self.order.payment_method = Order.PAYMENT_CARD_ON_HAND
         self.order.prepayment_amount = self.order.get_prepayment_due()
         self.order.save(update_fields=['payment_method', 'prepayment_amount'])
         resp = self.client.get(reverse('customer:order_complete', kwargs={'pk': self.order.pk}))
         self.assertEqual(resp.status_code, 200)
         self.assertContains(resp, 'PDF-квитанция')
         self.assertContains(resp, 'Остаток к оплате')
+
+
+# --------------- Order Review (after issued) ---------------
+
+class OrderReviewTest(TestCase):
+    def setUp(self):
+        self.user = make_customer_user(phone='89991118888')
+        self.client = TestClient()
+        self.client.force_login(self.user)
+        self.client_obj, _ = Client.objects.get_or_create(
+            phone=self.user.phone, defaults={'name': 'Test'},
+        )
+        self.cat = ServiceCategory.objects.create(name='Тест', slug='test-review')
+        self.svc = Service.objects.create(name='Услуга', price=Decimal('500'), category=self.cat)
+        self.order = Order.objects.create(
+            client=self.client_obj,
+            status=Order.STATUS_ISSUED,
+            source=Order.SOURCE_WEB,
+        )
+        OrderItem.objects.create(
+            order=self.order,
+            service=self.svc,
+            unit_price=Decimal('500'),
+            quantity=1,
+            complexity=Decimal('1.0'),
+        )
+
+    def test_order_review_page_200_for_issued(self):
+        resp = self.client.get(reverse('customer:order_review', kwargs={'pk': self.order.pk}))
+        self.assertEqual(resp.status_code, 200)
+        self.assertContains(resp, 'Оставить отзыв')
+        self.assertContains(resp, 'Оценка')
+
+    def test_order_review_redirects_if_not_issued(self):
+        self.order.status = Order.STATUS_READY
+        self.order.save(update_fields=['status'])
+        resp = self.client.get(reverse('customer:order_review', kwargs={'pk': self.order.pk}))
+        self.assertEqual(resp.status_code, 302)
+        self.assertIn(reverse('customer:account'), resp.url)
+
+    def test_order_review_post_creates_review(self):
+        resp = self.client.post(
+            reverse('customer:order_review', kwargs={'pk': self.order.pk}),
+            {'text': 'Всё отлично, работа выполнена качественно!', 'rating': '5'},
+        )
+        self.assertEqual(resp.status_code, 302)
+        self.assertIn(reverse('customer:account'), resp.url)
+        review = Review.objects.get(order=self.order)
+        self.assertEqual(review.rating, 5)
+        self.assertIn('качественно', review.text)
+        self.assertEqual(review.author_name, self.user.get_full_name() or self.user.phone)
+
+    def test_order_review_already_reviewed_redirects(self):
+        Review.objects.create(
+            order=self.order,
+            author_name='Test',
+            text='Уже был отзыв',
+            rating=4,
+        )
+        resp = self.client.get(reverse('customer:order_review', kwargs={'pk': self.order.pk}))
+        self.assertEqual(resp.status_code, 302)
+        self.assertIn(reverse('customer:account'), resp.url)
 
 
 # --------------- API Request Return Delivery ---------------

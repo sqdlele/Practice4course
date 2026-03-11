@@ -22,6 +22,7 @@
                     <span class="web-orders-badge" id="web-orders-badge" style="display:none"></span>
                 </a>
                 <a href="{% url 'core:staff_chat_list' %}" class="btn btn-ghost">Чаты</a>
+                <a href="{% url 'core:finance' %}" class="btn btn-ghost">Финансы</a>
                 <span class="user-name">{{ user.get_full_name }}</span>
                 <form action="{% url 'core:logout' %}" method="post" class="logout-form">
                     {% csrf_token %}

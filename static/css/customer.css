@@ -2803,6 +2803,145 @@ width: 100%; /* Занимает всю ширину родителя */
     background: #fff;
 }
 
+/* --------------- Order review form (account) --------------- */
+.account-review-page .checkout-card.account-review-form {
+    padding: 1.75rem 1.75rem 1.5rem;
+    border-radius: 16px;
+    box-shadow: 0 4px 16px rgba(0,0,0,.06), 0 1px 3px rgba(0,0,0,.04);
+}
+.account-review-lead {
+    margin-bottom: 1.5rem;
+    font-size: 1rem;
+    line-height: 1.55;
+}
+.account-review-form .form-errors {
+    margin-bottom: 1.25rem;
+}
+.account-review-row {
+    margin-bottom: 1.5rem;
+}
+.account-review-row:last-of-type { margin-bottom: 0; }
+.account-review-label {
+    display: block;
+    font-size: .95rem;
+    font-weight: 600;
+    color: var(--text);
+    margin-bottom: .65rem;
+}
+.account-review-rating-row .account-review-label {
+    margin-bottom: .75rem;
+}
+.account-review-stars {
+    display: flex;
+    align-items: center;
+    gap: .25rem;
+    flex-wrap: wrap;
+}
+.account-review-star-label {
+    display: inline-flex;
+    flex-direction: column;
+    align-items: center;
+    gap: .2rem;
+    cursor: pointer;
+    padding: .4rem;
+    border: none;
+    border-radius: 10px;
+    background: transparent;
+    transition: background .15s, transform .1s;
+}
+.account-review-star-label:hover {
+    background: rgba(234, 179, 8, .1);
+}
+.account-review-star-label:active {
+    transform: scale(0.95);
+}
+/* Скрываем радио-кнопки полностью — выбор только по клику на звезду */
+.account-review-star-input {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    padding: 0;
+    margin: -1px;
+    overflow: hidden;
+    clip: rect(0, 0, 0, 0);
+    white-space: nowrap;
+    border: 0;
+    pointer-events: none;
+}
+.account-review-star-icon {
+    display: flex;
+    color: #d1d5db;
+    transition: color .2s;
+}
+.account-review-star-icon svg {
+    width: 36px;
+    height: 36px;
+    display: block;
+}
+/* Загораются жёлтым от 1 до N при выборе */
+.account-review-stars:has(input[value="5"]:checked) .account-review-star-label:nth-child(-n+5) .account-review-star-icon { color: #eab308; }
+.account-review-stars:has(input[value="4"]:checked) .account-review-star-label:nth-child(-n+4) .account-review-star-icon { color: #eab308; }
+.account-review-stars:has(input[value="3"]:checked) .account-review-star-label:nth-child(-n+3) .account-review-star-icon { color: #eab308; }
+.account-review-stars:has(input[value="2"]:checked) .account-review-star-label:nth-child(-n+2) .account-review-star-icon { color: #eab308; }
+.account-review-stars:has(input[value="1"]:checked) .account-review-star-label:nth-child(-n+1) .account-review-star-icon { color: #eab308; }
+.account-review-star-label:has(.account-review-star-input:checked) {
+    background: rgba(234, 179, 8, .12);
+}
+.account-review-star-num {
+    font-size: .7rem;
+    font-weight: 600;
+    color: var(--text-muted);
+}
+.account-review-star-label:has(.account-review-star-input:checked) .account-review-star-num {
+    color: #b45309;
+}
+.account-review-text-wrap {
+    position: relative;
+}
+.account-review-form textarea.form-input {
+    width: 100%;
+    min-height: 120px;
+    padding: 1rem 1.1rem;
+    border-radius: 12px;
+    border: 1px solid var(--border);
+    font-size: 1rem;
+    line-height: 1.5;
+    resize: vertical;
+    transition: border-color .2s, box-shadow .2s;
+}
+.account-review-form textarea.form-input:focus {
+    border-color: var(--primary);
+    box-shadow: 0 0 0 3px rgba(13, 148, 136, .12);
+}
+.account-review-form textarea.form-input::placeholder {
+    color: var(--text-muted);
+    opacity: .9;
+}
+.account-review-hint {
+    display: block;
+    margin-top: .4rem;
+    font-size: .8rem;
+    color: var(--text-muted);
+}
+.account-review-actions {
+    display: flex;
+    align-items: center;
+    gap: 1rem;
+    flex-wrap: wrap;
+    margin-top: 1.75rem;
+    padding-top: 1.5rem;
+    border-top: 1px solid var(--border);
+}
+.account-review-submit {
+    padding: 0.75rem 1.5rem;
+    font-size: 1rem;
+    border-radius: 10px;
+    box-shadow: 0 2px 8px rgba(13, 148, 136, .25);
+}
+.account-review-submit:hover {
+    box-shadow: 0 4px 12px rgba(13, 148, 136, .3);
+}
+
 @media (max-width: 900px) {
     .checkout-layout,
     .checkout-complete-grid {

@@ -1,0 +1,12 @@
+{% extends "admin/index.html" %}
+{% load i18n static %}
+
+{% block content %}
+<div class="finance-admin-link" style="margin-bottom: 20px;">
+    <a href="{% url 'admin_finance' %}" class="button" style="font-size: 14px; padding: 10px 16px;">
+         Финансы и налоги
+    </a>
+    <span class="quiet" style="margin-left: 10px;">Выручка за месяц, налог 13%.</span>
+</div>
+{{ block.super }}
+{% endblock %}

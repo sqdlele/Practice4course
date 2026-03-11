@@ -11,6 +11,7 @@ urlpatterns = [
     path('order/new/', views.order_create, name='order_create'),
     path('order/<int:pk>/', views.order_detail, name='order_detail'),
     path('web-orders/', views.web_orders, name='web_orders'),
+    path('finance/', views.finance, name='finance'),
     path('api/clients/', views.api_client_search, name='api_client_search'),
     path('api/orders/search/', views.api_order_search, name='api_order_search'),
     path('api/web-orders-count/', views.api_web_orders_count, name='api_web_orders_count'),

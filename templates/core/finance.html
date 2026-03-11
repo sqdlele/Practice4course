@@ -1,0 +1,65 @@
+{% extends 'base.html' %}
+{% block title %}Финансы — Чисто.Тут{% endblock %}
+
+{% block content %}
+<div class="dashboard finance-dashboard">
+    <header class="finance-hero">
+        <div class="finance-hero-inner">
+            <h1 class="finance-hero-title">Финансы и налоги</h1>
+            <p class="finance-hero-desc">Выручка за период, расчёт налога 13%</p>
+        </div>
+    </header>
+
+    <section class="finance-period">
+        <form method="get" action="{% url 'core:finance' %}" class="finance-period-form">
+            <label for="finance-month" class="finance-period-label">Месяц</label>
+            <select name="month" id="finance-month" class="form-input finance-select">
+                {% for num, name in month_choices %}
+                <option value="{{ num }}" {% if num == month %}selected{% endif %}>{{ name }}</option>
+                {% endfor %}
+            </select>
+            <label for="finance-year" class="finance-period-label">Год</label>
+            <select name="year" id="finance-year" class="form-input finance-select">
+                {% for y in years_choices %}
+                <option value="{{ y }}" {% if y == year %}selected{% endif %}>{{ y }}</option>
+                {% endfor %}
+            </select>
+            <label for="finance-period-months" class="finance-period-label">За период</label>
+            <select name="period_months" id="finance-period-months" class="form-input finance-select">
+                {% for num, name in period_choices %}
+                <option value="{{ num }}" {% if num == period_months %}selected{% endif %}>{{ name }}</option>
+                {% endfor %}
+            </select>
+            <button type="submit" class="btn btn-primary">Показать</button>
+        </form>
+    </section>
+
+    <section class="finance-cards">
+
+        <div class="finance-card finance-card-revenue">
+            <h2 class="finance-card-title">Выручка за {{ period_label }}</h2>
+            <p class="finance-card-desc">Заказы «Выдано», созданные за выбранный период</p>
+            <p class="finance-card-value">{{ month_revenue|floatformat:2 }} ₽</p>
+            <p class="finance-card-meta">Заказов: {{ orders_count_issued }}</p>
+        </div>
+
+        <div class="finance-card finance-card-tax">
+            <h2 class="finance-card-title">Налог {{ tax_percent }}%</h2>
+            <p class="finance-card-desc">НДФЛ за выбранный период</p>
+            <p class="finance-card-value">− {{ month_tax|floatformat:2 }} ₽</p>
+        </div>
+
+        <div class="finance-card finance-card-net">
+            <h2 class="finance-card-title">Чистыми за период</h2>
+            <p class="finance-card-desc">После вычета налога</p>
+            <p class="finance-card-value finance-card-value--net">{{ month_net|floatformat:2 }} ₽</p>
+        </div>
+        
+    </section>
+
+    <section class="finance-summary">
+        <h2 class="finance-section-title">Итого</h2>
+        <p class="finance-summary-text">За выбранный период ({{ period_label }}) выручка <strong>{{ month_revenue|floatformat:2 }} ₽</strong>, к уплате налог <strong>{{ month_tax|floatformat:2 }} ₽</strong>, на руки <strong>{{ month_net|floatformat:2 }} ₽</strong>. После выдачи заказов в работе ожидается ещё <strong>{{ forecast_revenue|floatformat:2 }} ₽</strong> выручки и <strong>{{ forecast_tax|floatformat:2 }} ₽</strong> налога с них (незавершённые услуги: {{ orders_count_forecast }} заказов).</p>
+    </section>
+</div>
+{% endblock %}
