@@ -1,6 +1,7 @@
 from django.contrib import admin
 from django.contrib.auth.admin import UserAdmin as BaseUserAdmin
 from django.contrib.auth import get_user_model
+from unfold.admin import ModelAdmin, TabularInline
 
 from .models import Client, Order, Service, ServiceCategory, OrderItem, HeroBanner, Review, AboutPage, AboutFeature, AboutStep, DeliveryOption
 
@@ -8,14 +9,14 @@ User = get_user_model()
 
 
 @admin.register(ServiceCategory)
-class ServiceCategoryAdmin(admin.ModelAdmin):
+class ServiceCategoryAdmin(ModelAdmin):
     list_display = ('name', 'slug', 'order')
     list_editable = ('order',)
     prepopulated_fields = {'slug': ('name',)}
 
 
 @admin.register(Service)
-class ServiceAdmin(admin.ModelAdmin):
+class ServiceAdmin(ModelAdmin):
     list_display = ('name', 'parent', 'category', 'price', 'price_unit', 'cleaning_time', 'is_popular','svg_code')
     list_editable = ('price', 'price_unit', 'cleaning_time', 'is_popular')
     list_filter = ('category', 'parent', 'price_unit', 'has_dimensions', 'has_weight', 'is_popular')
@@ -40,48 +41,48 @@ class ServiceAdmin(admin.ModelAdmin):
 
 
 @admin.register(HeroBanner)
-class HeroBannerAdmin(admin.ModelAdmin):
+class HeroBannerAdmin(ModelAdmin):
     list_display = ('title', 'order')
     list_editable = ('order',)
 
 
 @admin.register(Review)
-class ReviewAdmin(admin.ModelAdmin):
+class ReviewAdmin(ModelAdmin):
     list_display = ('author_name', 'rating', 'order', 'created_at')
     list_filter = ('rating',)
 
 
 @admin.register(AboutPage)
-class AboutPageAdmin(admin.ModelAdmin):
+class AboutPageAdmin(ModelAdmin):
     list_display = ('hero_title', 'years_experience')
 
 
 @admin.register(AboutFeature)
-class AboutFeatureAdmin(admin.ModelAdmin):
+class AboutFeatureAdmin(ModelAdmin):
     list_display = ('title', 'order')
     list_editable = ('order',)
 
 
 @admin.register(AboutStep)
-class AboutStepAdmin(admin.ModelAdmin):
+class AboutStepAdmin(ModelAdmin):
     list_display = ('step_number', 'title', 'order')
     list_editable = ('order',)
 
 
 @admin.register(Client)
-class ClientAdmin(admin.ModelAdmin):
+class ClientAdmin(ModelAdmin):
     list_display = ('name', 'phone')
     search_fields = ('name', 'phone')
 
 
-class OrderItemInline(admin.TabularInline):
+class OrderItemInline(TabularInline):
     model = OrderItem
     extra = 0
     fields = ('service', 'unit_price', 'quantity', 'complexity', 'width', 'length', 'weight')
 
 
 @admin.register(Order)
-class OrderAdmin(admin.ModelAdmin):
+class OrderAdmin(ModelAdmin):
     list_display = (
         'id', 'client', 'source', 'status', 'pickup_method', 'pickup_cost',
         'payment_method', 'prepayment_amount', 'discount_percent',
@@ -94,7 +95,7 @@ class OrderAdmin(admin.ModelAdmin):
 
 
 @admin.register(DeliveryOption)
-class DeliveryOptionAdmin(admin.ModelAdmin):
+class DeliveryOptionAdmin(ModelAdmin):
     list_display = ('name', 'slug', 'base_price', 'free_if_order_total_above', 'free_kg', 'extra_per_kg', 'order')
     list_editable = ('base_price', 'free_if_order_total_above', 'free_kg', 'extra_per_kg', 'order')
 
@@ -105,7 +106,7 @@ def approve_users(modeladmin, request, queryset):
 
 
 @admin.register(User)
-class CustomUserAdmin(BaseUserAdmin):
+class CustomUserAdmin(ModelAdmin, BaseUserAdmin):
     list_display = ('phone', 'last_name', 'first_name', 'patronymic', 'is_staff', 'is_active', 'date_joined')
     list_filter = ('is_active', 'is_staff', 'is_superuser')
     search_fields = ('phone', 'first_name', 'last_name', 'patronymic')
