@@ -1,0 +1,88 @@
+{% extends 'customer/base.html' %}
+
+{% block title %}Оплата заказа #{{ order.pk }} — Чисто.Тут{% endblock %}
+
+{% block content %}
+<section class="checkout-page">
+    <div class="breadcrumbs">
+        <a href="{% url 'customer:cart' %}">Корзина</a>
+        <span class="bc-sep">/</span>
+        <span>Оплата заказа</span>
+    </div>
+
+    <div class="checkout-layout">
+        <div class="checkout-main">
+            <h1 class="section-title checkout-title">Оплата заказа № {{ order.pk }}</h1>
+            <p class="checkout-lead">
+                Выберите удобный способ оплаты. Первый взнос составляет 50% от стоимости услуг,
+                оставшуюся сумму можно оплатить при получении заказа.
+            </p>
+
+            {% if error %}
+            <div class="checkout-alert">{{ error }}</div>
+            {% endif %}
+
+            <form method="post" class="checkout-card">
+                {% csrf_token %}
+                <h2 class="checkout-card-title">Способ оплаты</h2>
+                <div class="checkout-payment-options">
+                    {% for value, label in payment_choices %}
+                    <label class="checkout-payment-option">
+                        <input type="radio" name="payment_method" value="{{ value }}" {% if order.payment_method == value %}checked{% endif %}>
+                        <span>
+                            <strong>{{ label }}</strong>
+                            {% if value == 'cash' %}
+                            <small>Оплата наличными при встрече с курьером или в пункте приёма</small>
+                            {% elif value == 'card_on_hand' %}
+                            <small>Оплата картой через терминал курьеру или приёмщику</small>
+                            {% elif value == 'card_online' %}
+                            <small>Онлайн-оплата банковской картой</small>
+                            {% elif value == 'sbp' %}
+                            <small>Оплата по QR-коду через СБП</small>
+                            {% endif %}
+                        </span>
+                    </label>
+                    {% endfor %}
+                </div>
+                <button type="submit" class="btn btn-primary btn-lg">Подтвердить оплату</button>
+            </form>
+        </div>
+
+        <aside class="checkout-sidebar">
+            <div class="checkout-card">
+                <h2 class="checkout-card-title">Состав заказа</h2>
+                <ul class="checkout-items">
+                    {% for item in order.items.all %}
+                    <li>
+                        <span>{{ item.service.name }} × {{ item.quantity }}</span>
+                        <strong>{{ item.line_total }} ₽</strong>
+                    </li>
+                    {% endfor %}
+                </ul>
+                <div class="checkout-summary-row">
+                    <span>Стоимость услуг</span>
+                    <strong>{{ order.get_subtotal }} ₽</strong>
+                </div>
+                {% if order.pickup_cost %}
+                <div class="checkout-summary-row">
+                    <span>Забор вещей курьером</span>
+                    <strong>{{ order.pickup_cost }} ₽</strong>
+                </div>
+                {% endif %}
+                <div class="checkout-summary-row checkout-summary-row--total">
+                    <span>Итого по заказу</span>
+                    <strong>{{ order.get_total }} ₽</strong>
+                </div>
+                <div class="checkout-summary-row">
+                    <span>Первый взнос</span>
+                    <strong>{{ prepayment_amount }} ₽</strong>
+                </div>
+                <div class="checkout-summary-row">
+                    <span>Остаток к оплате</span>
+                    <strong>{{ remaining_amount|floatformat:2 }} ₽</strong>
+                </div>
+            </div>
+        </aside>
+    </div>
+</section>
+{% endblock %}

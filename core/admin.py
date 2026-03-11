@@ -81,8 +81,12 @@ class OrderItemInline(admin.TabularInline):
 
 @admin.register(Order)
 class OrderAdmin(admin.ModelAdmin):
-    list_display = ('id', 'client', 'status', 'discount_percent', 'delivery_option', 'delivery_cost', 'ready_by', 'created_at')
-    list_filter = ('status',)
+    list_display = (
+        'id', 'client', 'source', 'status', 'pickup_method', 'pickup_cost',
+        'payment_method', 'prepayment_amount', 'discount_percent',
+        'delivery_option', 'delivery_cost', 'ready_by', 'created_at',
+    )
+    list_filter = ('status', 'source', 'pickup_method')
     search_fields = ('client__name', 'client__phone')
     date_hierarchy = 'ready_by'
     inlines = [OrderItemInline]

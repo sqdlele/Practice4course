@@ -48,7 +48,8 @@
              data-id="{{ service.pk }}" 
              data-price="{{ service.price }}" 
              data-unit="{{ service.price_unit }}" 
-             data-dims="{{ service.has_dimensions|yesno:'1,0' }}" 
+             data-dims="{{ service.has_dimensions|yesno:'1,0' }}"
+             data-has-weight="{{ service.has_weight|yesno:'1,0' }}"
              data-name="{{ service.name }}">
             
             <div class="svc-card-top">
@@ -89,6 +90,15 @@
                     <input type="range" class="svc-dim-range svc-width-range" min="0" max="15" step="0.1" value="0">
                 </div>
                 <div class="svc-dims-total">Итого: <strong class="svc-dims-sum">0 ₽</strong></div>
+            </div>
+            {% endif %}
+            {% if service.has_weight %}
+            <div class="svc-weight-panel" style="display:none">
+                <div class="svc-dim-row">
+                    <label>Вес, кг: <input type="number" class="svc-dim-input svc-weight-input" value="0" min="0" max="50" step="0.1"></label>
+                    <input type="range" class="svc-dim-range svc-weight-range" min="0" max="50" step="0.1" value="0">
+                </div>
+                <div class="svc-dims-total">Итого: <strong class="svc-weight-sum">0 ₽</strong></div>
             </div>
             {% endif %}
         </div>
@@ -199,8 +209,10 @@ ymaps.ready(function(){
         var id = parseInt(card.dataset.id);
         var price = parseFloat(card.dataset.price);
         var hasDims = card.dataset.dims === '1';
+        var hasWeight = card.dataset.hasWeight === '1';
         var valEl = card.querySelector('.svc-qty-val');
         var dimsPanel = card.querySelector('.svc-dims');
+        var weightPanel = card.querySelector('.svc-weight-panel');
 
         function getQty() { return parseInt(valEl.textContent) || 0; }
 
@@ -212,6 +224,9 @@ ymaps.ready(function(){
                 item.length = parseFloat(dimsPanel.querySelector('.svc-length').value) || 0;
                 item.width = parseFloat(dimsPanel.querySelector('.svc-width').value) || 0;
             }
+            if (hasWeight && weightPanel) {
+                item.weight = parseFloat(weightPanel.querySelector('.svc-weight-input').value) || 0;
+            }
             Cart.set(item);
         }
 
@@ -221,6 +236,10 @@ ymaps.ready(function(){
             if (hasDims && dimsPanel) {
                 dimsPanel.style.display = qty > 0 ? '' : 'none';
                 calcDimsTotal();
+            }
+            if (hasWeight && weightPanel) {
+                weightPanel.style.display = qty > 0 ? '' : 'none';
+                calcWeightTotal();
             }
             syncToCart();
         }
@@ -251,8 +270,36 @@ ymaps.ready(function(){
             syncPair(widInput, widRange);
         }
 
+        if (hasWeight && weightPanel) {
+            var wInput = weightPanel.querySelector('.svc-weight-input');
+            var wRange = weightPanel.querySelector('.svc-weight-range');
+            var wSumEl = weightPanel.querySelector('.svc-weight-sum');
+
+            function calcWeightTotal() {
+                var w = parseFloat(wInput.value) || 0;
+                var qty = getQty();
+                var total = Math.round(price * w * qty);
+                wSumEl.textContent = total.toLocaleString('ru-RU') + ' ₽';
+            }
+
+            wInput.addEventListener('input', function(){ wRange.value = wInput.value; calcWeightTotal(); syncToCart(); });
+            wRange.addEventListener('input', function(){ wInput.value = wRange.value; calcWeightTotal(); syncToCart(); });
+        }
+
         var existing = Cart.get(id);
-        if (existing) updateQty(existing.qty);
+        if (existing) {
+            if (hasDims && dimsPanel && existing.length) {
+                dimsPanel.querySelector('.svc-length').value = existing.length;
+                dimsPanel.querySelector('.svc-length-range').value = existing.length;
+                dimsPanel.querySelector('.svc-width').value = existing.width || 0;
+                dimsPanel.querySelector('.svc-width-range').value = existing.width || 0;
+            }
+            if (hasWeight && weightPanel && existing.weight) {
+                weightPanel.querySelector('.svc-weight-input').value = existing.weight;
+                weightPanel.querySelector('.svc-weight-range').value = existing.weight;
+            }
+            updateQty(existing.qty);
+        }
     });
 })();
 

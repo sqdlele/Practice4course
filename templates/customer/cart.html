@@ -5,6 +5,7 @@
 {% block content %}
 <section class="cart-page">
     <h1 class="section-title">Корзина</h1>
+    <p class="cart-page-desc" id="cart-page-desc" style="display:none">Проверьте выбранные услуги, укажите размеры или вес при необходимости и выберите способ сдачи вещей.</p>
 
     <div id="cart-empty" class="cart-empty" style="display:none">
         <svg width="64" height="64" viewBox="0 0 24 24" fill="none" stroke="var(--text-muted)" stroke-width="1.2">
@@ -23,23 +24,87 @@
                 <span>Позиций:</span>
                 <strong id="cart-count">0</strong>
             </div>
+            <div class="cart-summary-row">
+                <span>Стоимость услуг:</span>
+                <strong id="cart-services-total">0 ₽</strong>
+            </div>
+            <div class="cart-summary-row" id="cart-discount-row" style="display:none">
+                <span>Скидка постоянного клиента:</span>
+                <strong id="cart-discount">0 ₽</strong>
+            </div>
+            <div class="cart-summary-row" id="cart-pickup-fee-row" style="display:none">
+                <span>Забор вещей курьером:</span>
+                <strong id="cart-pickup-fee">400 ₽</strong>
+            </div>
             <div class="cart-summary-row cart-summary-total">
-                <span>Итого (базовая цена):</span>
+                <span>Итого по заявке:</span>
                 <strong id="cart-total">0 ₽</strong>
             </div>
-            <div id="cart-delivery-block" class="cart-delivery-block" style="display:none">
-                <p class="cart-delivery-title">Способ получения</p>
-                <div id="cart-delivery-options" class="cart-delivery-options"></div>
-                <div class="cart-summary-row cart-delivery-cost-row" id="cart-delivery-cost-row" style="display:none">
-                    <span>Доставка:</span>
-                    <strong id="cart-delivery-cost">0 ₽</strong>
-                </div>
-                <div class="cart-summary-row cart-summary-grand-total" id="cart-grand-total-row" style="display:none">
-                    <span>Итого к оплате:</span>
-                    <strong id="cart-grand-total">0 ₽</strong>
+            <div class="cart-summary-row cart-summary-grand-total">
+                <span>Первый взнос сейчас:</span>
+                <strong id="cart-prepayment">0 ₽</strong>
+            </div>
+            <div id="cart-pickup-block" class="cart-pickup-block">
+                <p class="cart-pickup-title">Как сдать вещи в химчистку?</p>
+                <div class="cart-pickup-options">
+                    <label class="cart-pickup-option" id="pickup-opt-self">
+                        <input type="radio" name="pickup_method" value="self_bring" checked>
+                        <span class="cart-pickup-option-icon">
+                            <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
+                        </span>
+                        <span class="cart-pickup-option-text">
+                            <strong>Отнесу сам</strong>
+                            <small>Принесите вещи к нам в пункт приёма</small>
+                        </span>
+                    </label>
+                    <div class="cart-pickup-detail" id="pickup-self-detail">
+                        <div class="cart-pickup-address-info">
+                            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"/><circle cx="12" cy="10" r="3"/></svg>
+                            <div>
+                                <strong>Пункт приёма «Чисто.Тут»</strong>
+                                <p>г. Ижевск, ул. Пушкинская, д. 123</p>
+                                <small>Пн–Сб 9:00–20:00, Вс — выходной</small>
+                            </div>
+                        </div>
+                    </div>
+
+                    <label class="cart-pickup-option" id="pickup-opt-courier">
+                        <input type="radio" name="pickup_method" value="courier_pickup">
+                        <span class="cart-pickup-option-icon">
+                            <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="1" y="3" width="15" height="13"/><polygon points="16 8 20 8 23 11 23 16 16 16 16 8"/><circle cx="5.5" cy="18.5" r="2.5"/><circle cx="18.5" cy="18.5" r="2.5"/></svg>
+                        </span>
+                        <span class="cart-pickup-option-text">
+                            <strong>Курьером</strong>
+                            <small>Курьер приедет и заберёт вещи по адресу, стоимость забора 400 ₽</small>
+                        </span>
+                    </label>
+                    <div class="cart-pickup-detail cart-pickup-detail-hidden" id="pickup-courier-detail">
+                        <div class="cart-courier-form">
+                            <div class="cart-courier-row">
+                                <label for="courier-street">Улица</label>
+                                <input type="text" id="courier-street" class="form-input" placeholder="ул. Ленина">
+                            </div>
+                            <div class="cart-courier-row-group">
+                                <div class="cart-courier-row">
+                                    <label for="courier-house">Дом</label>
+                                    <input type="text" id="courier-house" class="form-input" placeholder="12">
+                                </div>
+                                <div class="cart-courier-row">
+                                    <label for="courier-apt">Кв./офис</label>
+                                    <input type="text" id="courier-apt" class="form-input" placeholder="34">
+                                </div>
+                            </div>
+                            <div class="cart-courier-row">
+                                <label for="courier-comment">Комментарий для курьера</label>
+                                <input type="text" id="courier-comment" class="form-input" placeholder="Домофон, подъезд, время…">
+                            </div>
+                        </div>
+                    </div>
                 </div>
             </div>
             <p class="cart-note">Окончательная стоимость может быть скорректирована сотрудником при приёмке вещей.</p>
+            <p class="cart-note">Если выбран забор вещей курьером, к заказу всегда добавляется 400 ₽.</p>
+            <p class="cart-note">Первый взнос составляет 50% от стоимости услуг. После оформления вы перейдёте на страницу выбора способа оплаты.</p>
 
             {% if user.is_authenticated and has_discount_3 %}
             <p class="cart-discount-hint">
@@ -49,37 +114,35 @@
             {% endif %}
 
             {% if user.is_authenticated %}
-            <button type="button" id="cart-submit" class="btn btn-primary btn-lg btn-block">Оформить заявку</button>
+            <button type="button" id="cart-submit" class="btn btn-primary btn-lg btn-block">Оформить и перейти к оплате</button>
+            <a href="{% url 'customer:catalog' %}" class="btn btn-outline btn-block" style="margin-top:8px">Добавить ещё услуги</a>
             {% else %}
             <p class="cart-auth-note">
                 <a href="{% url 'customer:login' %}?next={% url 'customer:cart' %}">Войдите</a> или
-                <a href="{% url 'customer:register' %}">зарегистрируйтесь</a>, чтобы оформить заявку.
+                <a href="{% url 'customer:register' %}?next={% url 'customer:cart' %}">зарегистрируйтесь</a>, чтобы оформить заявку.
             </p>
             {% endif %}
         </div>
     </div>
 
-    <div id="cart-success" class="cart-success" style="display:none">
-        <svg width="64" height="64" viewBox="0 0 24 24" fill="none" stroke="var(--primary)" stroke-width="2">
-            <path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/>
-        </svg>
-        <h2>Заявка оформлена!</h2>
-        <p>Заказ <strong id="cart-order-id">#</strong>. Ожидайте подтверждения от сотрудника.</p>
-        <a href="{% url 'customer:home' %}" class="btn btn-primary">На главную</a>
-    </div>
 </section>
 
-<script src="{% static 'js/cart.js' %}"></script>
 <script>
 (function(){
+    var hasDiscount = {% if user.is_authenticated and has_discount_3 %}true{% else %}false{% endif %};
     var emptyEl = document.getElementById('cart-empty');
     var contentEl = document.getElementById('cart-content');
+    var descEl = document.getElementById('cart-page-desc');
     var itemsEl = document.getElementById('cart-items');
     var countEl = document.getElementById('cart-count');
+    var servicesTotalEl = document.getElementById('cart-services-total');
+    var discountRowEl = document.getElementById('cart-discount-row');
+    var discountEl = document.getElementById('cart-discount');
+    var pickupFeeRowEl = document.getElementById('cart-pickup-fee-row');
+    var pickupFeeEl = document.getElementById('cart-pickup-fee');
     var totalEl = document.getElementById('cart-total');
+    var prepaymentEl = document.getElementById('cart-prepayment');
     var submitBtn = document.getElementById('cart-submit');
-    var successEl = document.getElementById('cart-success');
-    var orderIdEl = document.getElementById('cart-order-id');
 
     var servicesCache = null;
 
@@ -94,14 +157,15 @@
         if (!items.length) {
             emptyEl.style.display = '';
             contentEl.style.display = 'none';
+            if (descEl) descEl.style.display = 'none';
             return;
         }
         emptyEl.style.display = 'none';
         contentEl.style.display = '';
+        if (descEl) descEl.style.display = '';
         itemsEl.innerHTML = '';
-        var total = 0;
+        var subtotal = 0;
         var count = 0;
-        var cartKg = 0;
 
         items.forEach(function(item) {
             var svc = servicesCache ? servicesCache[item.service_id] : null;
@@ -111,9 +175,8 @@
             if (item.length && item.width) lineTotal = price * item.length * item.width * item.qty;
             if (item.weight) {
                 lineTotal = price * item.weight * item.qty;
-                cartKg += parseFloat(item.weight) * (item.qty || 1);
             }
-            total += lineTotal;
+            subtotal += lineTotal;
             count += item.qty;
 
             var div = document.createElement('div');
@@ -123,8 +186,22 @@
                 : '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><circle cx="12" cy="12" r="10"/></svg>';
 
             var detailsHtml = '';
-            if (item.length && item.width) detailsHtml = '<span class="cart-item-detail">' + item.length + ' x ' + item.width + ' м</span>';
+            if (item.length && item.width) detailsHtml = '<span class="cart-item-detail">' + item.length + ' × ' + item.width + ' м</span>';
             if (item.weight) detailsHtml = '<span class="cart-item-detail">' + item.weight + ' кг</span>';
+
+            var paramsHtml = '';
+            if (svc.has_dimensions) {
+                paramsHtml += '<div class="cart-item-params">' +
+                    '<label>Ш <input type="number" step="0.1" min="0.1" class="form-input cart-param-input ci-width" data-id="' + item.service_id + '" value="' + (item.width || '') + '" placeholder="м"></label>' +
+                    '<span>×</span>' +
+                    '<label>Д <input type="number" step="0.1" min="0.1" class="form-input cart-param-input ci-length" data-id="' + item.service_id + '" value="' + (item.length || '') + '" placeholder="м"></label>' +
+                '</div>';
+            }
+            if (svc.has_weight) {
+                paramsHtml += '<div class="cart-item-params">' +
+                    '<label>Вес <input type="number" step="0.1" min="0.1" class="form-input cart-param-input ci-weight" data-id="' + item.service_id + '" value="' + (item.weight || '') + '" placeholder="кг"></label>' +
+                '</div>';
+            }
 
             div.innerHTML =
                 '<div class="cart-item-thumb">' + imgHtml + '</div>' +
@@ -132,6 +209,7 @@
                     '<h3>' + svc.name + '</h3>' +
                     '<span class="cart-item-time">' + svc.cleaning_time + '</span>' +
                     detailsHtml +
+                    paramsHtml +
                 '</div>' +
                 '<div class="cart-item-qty">' +
                     '<button type="button" class="svc-qty-btn ci-minus" data-id="' + item.service_id + '">&minus;</button>' +
@@ -143,65 +221,29 @@
             itemsEl.appendChild(div);
         });
 
+        var pickup = (document.querySelector('input[name="pickup_method"]:checked') || {}).value || 'self_bring';
+        var discountAmount = hasDiscount ? +(subtotal * 0.03).toFixed(2) : 0;
+        var servicesTotal = +(subtotal - discountAmount).toFixed(2);
+        var pickupFee = pickup === 'courier_pickup' ? 400 : 0;
+        var total = +(servicesTotal + pickupFee).toFixed(2);
+        var prepayment = +(servicesTotal / 2).toFixed(2);
+
         countEl.textContent = count;
-        totalEl.textContent = Math.round(total).toLocaleString('ru-RU') + ' ₽';
-
-        var deliveryBlock = document.getElementById('cart-delivery-block');
-        var deliveryOptionsEl = document.getElementById('cart-delivery-options');
-        if (deliveryBlock && deliveryOptionsEl) {
-            deliveryBlock.style.display = '';
-            fetch('{% url "customer:api_delivery_options" %}?cart_total=' + encodeURIComponent(Math.round(total * 100) / 100) + '&cart_kg=' + encodeURIComponent(cartKg))
-                .then(function(r){ return r.json(); })
-                .then(function(data){
-                    var opts = data.delivery_options || [];
-                    deliveryOptionsEl.innerHTML = '';
-                    var selectedSlug = (window._cartDeliverySlug || 'pickup');
-                    opts.forEach(function(opt){
-                        var isSelected = opt.slug === selectedSlug;
-                        var costText = parseFloat(opt.cost) === 0 ? 'Бесплатно' : parseFloat(opt.cost).toLocaleString('ru-RU') + ' ₽';
-                        var label = document.createElement('label');
-                        label.className = 'cart-delivery-option';
-                        label.innerHTML = '<input type="radio" name="delivery_option" value="' + opt.slug + '" ' + (isSelected ? 'checked' : '') + '> ' +
-                            '<span class="cart-delivery-option-name">' + opt.name + '</span> ' +
-                            '<span class="cart-delivery-option-cost">' + costText + '</span>';
-                        label.querySelector('input').addEventListener('change', function(){
-                            window._cartDeliverySlug = opt.slug;
-                            updateDeliveryTotals(window._cartSubtotal || 0, window._cartDeliveryOptions || []);
-                        });
-                        deliveryOptionsEl.appendChild(label);
-                    });
-                    if (opts.length && !deliveryOptionsEl.querySelector('input:checked')) {
-                        deliveryOptionsEl.querySelector('input').checked = true;
-                        window._cartDeliverySlug = opts[0].slug;
-                    }
-                    window._cartDeliveryOptions = opts;
-                    window._cartSubtotal = total;
-                    updateDeliveryTotals(total, opts);
-                });
+        servicesTotalEl.textContent = servicesTotal.toLocaleString('ru-RU') + ' ₽';
+        if (discountRowEl) {
+            discountRowEl.style.display = discountAmount > 0 ? '' : 'none';
         }
-
-        function updateDeliveryTotals(subtotal, opts) {
-            var slug = window._cartDeliverySlug || 'pickup';
-            var opt = (opts || window._cartDeliveryOptions || []).find(function(o){ return o.slug === slug; });
-            var cost = opt ? parseFloat(opt.cost) : 0;
-            var costRow = document.getElementById('cart-delivery-cost-row');
-            var costEl = document.getElementById('cart-delivery-cost');
-            var grandRow = document.getElementById('cart-grand-total-row');
-            var grandEl = document.getElementById('cart-grand-total');
-            if (costRow && costEl) {
-                if (cost > 0) {
-                    costRow.style.display = '';
-                    costEl.textContent = cost.toLocaleString('ru-RU') + ' ₽';
-                } else {
-                    costRow.style.display = 'none';
-                }
-            }
-            if (grandRow && grandEl) {
-                var grand = subtotal + cost;
-                grandRow.style.display = '';
-                grandEl.textContent = Math.round(grand).toLocaleString('ru-RU') + ' ₽';
-            }
+        if (discountEl) {
+            discountEl.textContent = '− ' + discountAmount.toLocaleString('ru-RU') + ' ₽';
         }
+        if (pickupFeeRowEl) {
+            pickupFeeRowEl.style.display = pickupFee > 0 ? '' : 'none';
+        }
+        if (pickupFeeEl) {
+            pickupFeeEl.textContent = pickupFee.toLocaleString('ru-RU') + ' ₽';
+        }
+        totalEl.textContent = total.toLocaleString('ru-RU') + ' ₽';
+        prepaymentEl.textContent = prepayment.toLocaleString('ru-RU') + ' ₽';
 
         itemsEl.querySelectorAll('.ci-minus').forEach(function(btn){
             btn.addEventListener('click', function(){
@@ -225,14 +267,77 @@
                 renderCart();
             });
         });
+        itemsEl.querySelectorAll('.ci-width, .ci-length').forEach(function(inp){
+            inp.addEventListener('change', function(){
+                var id = parseInt(inp.dataset.id);
+                var ci = Cart.get(id);
+                if (!ci) return;
+                var row = inp.closest('.cart-item');
+                var wInp = row.querySelector('.ci-width');
+                var lInp = row.querySelector('.ci-length');
+                ci.width = parseFloat(wInp ? wInp.value : 0) || 0;
+                ci.length = parseFloat(lInp ? lInp.value : 0) || 0;
+                Cart.set(ci);
+                renderCart();
+            });
+        });
+        itemsEl.querySelectorAll('.ci-weight').forEach(function(inp){
+            inp.addEventListener('change', function(){
+                var id = parseInt(inp.dataset.id);
+                var ci = Cart.get(id);
+                if (!ci) return;
+                ci.weight = parseFloat(inp.value) || 0;
+                Cart.set(ci);
+                renderCart();
+            });
+        });
     }
 
     fetchServices().then(renderCart);
 
+    // Toggle pickup details
+    var selfDetail = document.getElementById('pickup-self-detail');
+    var courierDetail = document.getElementById('pickup-courier-detail');
+    document.querySelectorAll('input[name="pickup_method"]').forEach(function(radio) {
+        radio.addEventListener('change', function() {
+            if (this.value === 'courier_pickup') {
+                selfDetail.classList.add('cart-pickup-detail-hidden');
+                courierDetail.classList.remove('cart-pickup-detail-hidden');
+            } else {
+                selfDetail.classList.remove('cart-pickup-detail-hidden');
+                courierDetail.classList.add('cart-pickup-detail-hidden');
+            }
+            renderCart();
+        });
+    });
+
+    function buildCourierAddress() {
+        var street = (document.getElementById('courier-street') || {}).value || '';
+        var house = (document.getElementById('courier-house') || {}).value || '';
+        var apt = (document.getElementById('courier-apt') || {}).value || '';
+        var comment = (document.getElementById('courier-comment') || {}).value || '';
+        var parts = [];
+        if (street.trim()) parts.push(street.trim());
+        if (house.trim()) parts.push('д. ' + house.trim());
+        if (apt.trim()) parts.push('кв. ' + apt.trim());
+        var addr = parts.join(', ');
+        if (comment.trim()) addr += ' (' + comment.trim() + ')';
+        return addr;
+    }
+
     if (submitBtn) {
         submitBtn.addEventListener('click', function(){
+            var pickup = (document.querySelector('input[name="pickup_method"]:checked') || {}).value || 'self_bring';
+            var courierAddr = '';
+            if (pickup === 'courier_pickup') {
+                courierAddr = buildCourierAddress();
+                if (!courierAddr.trim()) {
+                    alert('Укажите адрес для курьера');
+                    return;
+                }
+            }
             submitBtn.disabled = true;
-            submitBtn.textContent = 'Оформляем...';
+            submitBtn.textContent = 'Переходим к оплате...';
             fetch('{% url "customer:api_create_order" %}', {
                 method: 'POST',
                 headers: {
@@ -241,25 +346,24 @@
                 },
                 body: JSON.stringify({
                     items: Cart.getAll(),
-                    delivery_option_slug: window._cartDeliverySlug || 'pickup'
+                    pickup_method: pickup,
+                    courier_address: courierAddr
                 }),
             })
             .then(function(r){ return r.json(); })
             .then(function(data){
                 if (data.order_id) {
                     Cart.clear();
-                    contentEl.style.display = 'none';
-                    orderIdEl.textContent = '#' + data.order_id;
-                    successEl.style.display = '';
+                    window.location.href = data.payment_url || '{% url "customer:account" %}';
                 } else {
                     submitBtn.disabled = false;
-                    submitBtn.textContent = 'Оформить заявку';
+                    submitBtn.textContent = 'Оформить и перейти к оплате';
                     alert(data.error || 'Ошибка оформления');
                 }
             })
             .catch(function(){
                 submitBtn.disabled = false;
-                submitBtn.textContent = 'Оформить заявку';
+                submitBtn.textContent = 'Оформить и перейти к оплате';
                 alert('Ошибка сети');
             });
         });

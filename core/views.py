@@ -1,14 +1,22 @@
+from datetime import timedelta
 from decimal import Decimal
 import re
 from django.shortcuts import render, redirect
 from django.db.models import Q, Prefetch
 from django.contrib.auth.views import LoginView, LogoutView
-from django.contrib.auth.decorators import login_required
+from functools import wraps
+from django.contrib.auth.decorators import login_required as _login_required
+
+
+def login_required(view_func):
+    """login_required with staff login URL."""
+    return _login_required(view_func, login_url='core:login')
 from django.views.generic import CreateView
 from django.urls import reverse_lazy
 from django.utils import timezone
 from django.http import JsonResponse
-from django.views.decorators.http import require_GET
+from django.views.decorators.http import require_GET, require_POST
+from django.shortcuts import get_object_or_404
 
 from .models import Order, Client, Service, OrderItem, ServiceCategory
 from .forms import RegisterForm, OrderCreateForm
@@ -78,12 +86,15 @@ def home(request):
         else:
             search_results = _order_search_by_client(query)
 
+    web_orders_new = Order.objects.filter(source=Order.SOURCE_WEB, status=Order.STATUS_ACCEPTED).count()
+
     context = {
         'in_work': in_work,
         'ready_count': ready_count,
         'urgent_orders': urgent_orders,
         'search_query': query,
         'search_results': search_results,
+        'web_orders_new_count': web_orders_new,
     }
     return render(request, 'core/home.html', context)
 
@@ -174,7 +185,7 @@ def api_order_search(request):
 @login_required
 def order_create(request):
     """Оформление нового заказа: выбор или регистрация клиента + услуги по категориям с подпунктами."""
-    default_ready = timezone.localdate() + timezone.timedelta(days=3)
+    default_ready = timezone.localdate() + timedelta(days=3)
     form = OrderCreateForm(
         request.POST or None,
         initial={'ready_by': default_ready},
@@ -246,6 +257,106 @@ def order_create(request):
         'form': form,
         'service_groups': service_groups,
     })
+
+
+@login_required
+def order_detail(request, pk):
+    """Детальная страница заказа: просмотр, смена статуса, редактирование позиций."""
+    order = get_object_or_404(
+        Order.objects.select_related('client', 'delivery_option').prefetch_related('items__service'),
+        pk=pk,
+    )
+
+    if request.method == 'POST':
+        from django.contrib import messages
+        action = request.POST.get('action')
+
+        if action == 'change_status':
+            new_status = request.POST.get('status', '')
+            valid = dict(Order.STATUS_CHOICES)
+            if new_status in valid:
+                order.status = new_status
+                order.save(update_fields=['status'])
+                messages.success(request, f'Статус изменён на «{valid[new_status]}».')
+
+        elif action == 'set_ready_by':
+            from datetime import date
+            try:
+                d = request.POST.get('ready_by', '')
+                order.ready_by = date.fromisoformat(d) if d else None
+                order.save(update_fields=['ready_by'])
+                messages.success(request, 'Дата готовности обновлена.')
+            except (ValueError, TypeError):
+                messages.error(request, 'Некорректная дата.')
+
+        elif action == 'update_items':
+            for item in order.items.all():
+                price_key = f'price_{item.pk}'
+                qty_key = f'qty_{item.pk}'
+                if price_key in request.POST:
+                    try:
+                        item.unit_price = Decimal(request.POST[price_key])
+                    except Exception:
+                        pass
+                if qty_key in request.POST:
+                    try:
+                        item.quantity = max(1, int(request.POST[qty_key]))
+                    except Exception:
+                        pass
+                item.save()
+            messages.success(request, 'Позиции обновлены.')
+
+        elif action == 'delete_item':
+            item_id = request.POST.get('item_id')
+            order.items.filter(pk=item_id).delete()
+            if not order.items.exists():
+                messages.warning(request, 'Заказ пуст — все позиции удалены.')
+            else:
+                messages.success(request, 'Позиция удалена.')
+
+        return redirect('core:order_detail', pk=order.pk)
+
+    next_statuses = []
+    transitions = {
+        Order.STATUS_ACCEPTED: [Order.STATUS_IN_PROGRESS],
+        Order.STATUS_IN_PROGRESS: [Order.STATUS_READY],
+        Order.STATUS_READY: [Order.STATUS_ISSUED],
+    }
+    for s in transitions.get(order.status, []):
+        next_statuses.append({'value': s, 'label': dict(Order.STATUS_CHOICES)[s]})
+
+    return render(request, 'core/order_detail.html', {
+        'order': order,
+        'next_statuses': next_statuses,
+    })
+
+
+@login_required
+def web_orders(request):
+    """Заявки с сайта (source=web)."""
+    orders = (
+        Order.objects.filter(source=Order.SOURCE_WEB)
+        .select_related('client')
+        .prefetch_related('items__service')
+        .order_by('-created_at')[:100]
+    )
+    new_count = Order.objects.filter(source=Order.SOURCE_WEB, status=Order.STATUS_ACCEPTED).count()
+    status_display = dict(Order.STATUS_CHOICES)
+    pickup_display = dict(Order.PICKUP_CHOICES)
+    return render(request, 'core/web_orders.html', {
+        'orders': orders,
+        'new_count': new_count,
+        'status_display': status_display,
+        'pickup_display': pickup_display,
+    })
+
+
+@login_required
+@require_GET
+def api_web_orders_count(request):
+    """Кол-во новых заявок с сайта (статус 'accepted') для бейджа."""
+    count = Order.objects.filter(source=Order.SOURCE_WEB, status=Order.STATUS_ACCEPTED).count()
+    return JsonResponse({'count': count})
 
 
 @login_required

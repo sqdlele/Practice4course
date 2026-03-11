@@ -43,7 +43,7 @@
     var form = document.getElementById('register-form');
     if (!form) return;
     var fioNames = ['last_name', 'first_name', 'patronymic'];
-    var digitRe = /[0-9]/g;
+    var digitRe = /[0-9]/;
 
     function showError(name, message) {
         var el = document.getElementById('error-' + name);
@@ -74,7 +74,7 @@
         if (!input) return;
         input.addEventListener('input', function() {
             var before = this.value;
-            var after = before.replace(digitRe, '');
+            var after = before.replace(/[0-9]/g, '');
             if (after !== before) {
                 this.value = after;
                 showError(name, 'В поле не должно быть цифр.');

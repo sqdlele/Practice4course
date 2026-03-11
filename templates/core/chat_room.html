@@ -1,11 +1,11 @@
 {% extends 'base.html' %}
-{% block title %}Чат: {{ room.user.get_full_name|default:room.user.username }} — Чисто.Тут{% endblock %}
+{% block title %}Чат: {{ room.user.get_full_name|default:room.user.phone }} — Чисто.Тут{% endblock %}
 
 {% block content %}
 <div class="staff-chat">
     <div class="staff-chat-header">
         <a href="{% url 'core:staff_chat_list' %}" class="btn btn-ghost">&larr; Все чаты</a>
-        <h2>{{ room.user.get_full_name|default:room.user.username }}</h2>
+        <h2>{{ room.user.get_full_name|default:room.user.phone }}</h2>
     </div>
     <div id="chat-messages" class="staff-chat-body">
         {% for msg in chat_messages %}

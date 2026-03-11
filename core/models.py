@@ -336,8 +336,33 @@ class Order(models.Model):
         (STATUS_ISSUED, 'Выдано'),
     ]
 
+    PICKUP_COURIER = 'courier_pickup'
+    PICKUP_SELF = 'self_bring'
+    PICKUP_CHOICES = [
+        (PICKUP_COURIER, 'Курьером'),
+        (PICKUP_SELF, 'Отнесу сам'),
+    ]
+    PAYMENT_CASH = 'cash'
+    PAYMENT_CARD_ON_HAND = 'card_on_hand'
+    PAYMENT_CARD_ONLINE = 'card_online'
+    PAYMENT_SBP = 'sbp'
+    PAYMENT_CHOICES = [
+        (PAYMENT_CASH, 'Наличкой курьеру/приемщику'),
+        (PAYMENT_CARD_ON_HAND, 'Картой курьеру/приемщику'),
+        (PAYMENT_CARD_ONLINE, 'Картой онлайн'),
+        (PAYMENT_SBP, 'СБП'),
+    ]
+
+    SOURCE_WEB = 'web'
+    SOURCE_STAFF = 'staff'
+    SOURCE_CHOICES = [
+        (SOURCE_WEB, 'Сайт'),
+        (SOURCE_STAFF, 'Сотрудник'),
+    ]
+
     client = models.ForeignKey(Client, on_delete=models.CASCADE, related_name='orders', verbose_name='Клиент')
     status = models.CharField('Статус', max_length=20, choices=STATUS_CHOICES, default=STATUS_ACCEPTED, db_index=True)
+    source = models.CharField('Источник', max_length=10, choices=SOURCE_CHOICES, default=SOURCE_STAFF, db_index=True)
     ready_by = models.DateField('Готовность к', null=True, blank=True)
     created_at = models.DateTimeField('Создан', auto_now_add=True)
     discount_percent = models.DecimalField(
@@ -346,16 +371,51 @@ class Order(models.Model):
         decimal_places=2,
         default=0,
     )
+    pickup_method = models.CharField(
+        'Способ сдачи вещей',
+        max_length=20,
+        choices=PICKUP_CHOICES,
+        default=PICKUP_SELF,
+    )
+    courier_address = models.CharField(
+        'Адрес для курьера',
+        max_length=500,
+        blank=True,
+        default='',
+    )
+    pickup_cost = models.DecimalField(
+        'Стоимость забора вещей курьером (₽)',
+        max_digits=10,
+        decimal_places=2,
+        default=Decimal('0'),
+    )
     delivery_option = models.ForeignKey(
         'DeliveryOption',
         on_delete=models.PROTECT,
         null=True,
         blank=True,
         related_name='orders',
-        verbose_name='Способ получения',
+        verbose_name='Способ получения готового заказа',
     )
     delivery_cost = models.DecimalField(
         'Стоимость доставки (₽)',
+        max_digits=10,
+        decimal_places=2,
+        default=Decimal('0'),
+    )
+    return_delivery_requested = models.BooleanField(
+        'Запрос доставки готового заказа',
+        default=False,
+    )
+    payment_method = models.CharField(
+        'Способ оплаты',
+        max_length=30,
+        choices=PAYMENT_CHOICES,
+        blank=True,
+        default='',
+    )
+    prepayment_amount = models.DecimalField(
+        'Первый взнос (₽)',
         max_digits=10,
         decimal_places=2,
         default=Decimal('0'),
@@ -370,16 +430,26 @@ class Order(models.Model):
         return f"Заказ #{self.pk} — {self.client.name}"
 
     def get_total(self):
-        """Итог: сумма по позициям с учётом скидки + доставка."""
+        """Итог: сумма по позициям с учётом скидки + забор вещей + доставка."""
         total = sum(item.get_line_total(self.discount_percent) for item in self.items.all())
         total = Decimal(total).quantize(Decimal('0.01'))
+        pickup = self.pickup_cost or Decimal('0')
         delivery = self.delivery_cost or Decimal('0')
-        return (total + delivery).quantize(Decimal('0.01'))
+        return (total + pickup + delivery).quantize(Decimal('0.01'))
 
     def get_subtotal(self):
-        """Сумма по позициям без доставки (для расчёта стоимости доставки)."""
+        """Сумма по позициям без забора и доставки."""
         total = sum(item.get_line_total(self.discount_percent) for item in self.items.all())
         return Decimal(total).quantize(Decimal('0.01'))
+
+    def get_prepayment_due(self):
+        """Первый взнос: половина стоимости услуг без логистики."""
+        return (self.get_subtotal() / Decimal('2')).quantize(Decimal('0.01'))
+
+    def get_remaining_due(self):
+        """Остаток к оплате после первого взноса."""
+        prepaid = self.prepayment_amount or self.get_prepayment_due()
+        return max(Decimal('0'), self.get_total() - prepaid).quantize(Decimal('0.01'))
 
 
 class OrderItem(models.Model):
@@ -423,3 +493,8 @@ class OrderItem(models.Model):
         if discount_percent is not None and discount_percent > 0:
             total = (total * (Decimal('100') - discount_percent) / Decimal('100')).quantize(Decimal('0.01'))
         return total
+
+    @property
+    def line_total(self):
+        """Сумма с учётом скидки заказа (для шаблонов, где нельзя передать аргумент)."""
+        return self.get_line_total(self.order.discount_percent)

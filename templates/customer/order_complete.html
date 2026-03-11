@@ -1,0 +1,76 @@
+{% extends 'customer/base.html' %}
+
+{% block title %}Заказ #{{ order.pk }} оформлен — Чисто.Тут{% endblock %}
+
+{% block content %}
+<section class="checkout-page">
+    <div class="breadcrumbs">
+        <a href="{% url 'customer:cart' %}">Корзина</a>
+        <span class="bc-sep">/</span>
+        <a href="{% url 'customer:order_payment' order.pk %}">Оплата</a>
+        <span class="bc-sep">/</span>
+        <span>Готово</span>
+    </div>
+
+    <div class="checkout-complete-card">
+        <h1 class="section-title checkout-title">Заказ № {{ order.pk }} оформлен</h1>
+        <p class="checkout-lead">
+            Заявка создана, способ оплаты выбран, квитанция уже доступна. Статус заказа и дальнейшие обновления
+            можно отслеживать в личном кабинете.
+        </p>
+
+        <div class="checkout-complete-grid">
+            <div class="checkout-card">
+                <h2 class="checkout-card-title">Информация о заказе</h2>
+                <div class="checkout-info-list">
+                    <p><span>Статус</span><strong>{{ order.get_status_display }}</strong></p>
+                    <p><span>Сдача вещей</span><strong>{{ order.get_pickup_method_display }}</strong></p>
+                    {% if order.courier_address %}
+                    <p><span>Адрес для курьера</span><strong>{{ order.courier_address }}</strong></p>
+                    {% endif %}
+                    <p><span>Способ оплаты</span><strong>{{ order.get_payment_method_display }}</strong></p>
+                    <p><span>Стоимость услуг</span><strong>{{ order.get_subtotal }} ₽</strong></p>
+                    {% if order.pickup_cost %}
+                    <p><span>Забор вещей курьером</span><strong>{{ order.pickup_cost }} ₽</strong></p>
+                    {% endif %}
+                    <p><span>Итого по заказу</span><strong>{{ order.get_total }} ₽</strong></p>
+                    <p><span>Первый взнос</span><strong>{{ prepayment_amount }} ₽</strong></p>
+                    <p><span>Остаток к оплате</span><strong>{{ remaining_amount }} ₽</strong></p>
+                </div>
+                <div class="checkout-complete-actions">
+                    <a href="{% url 'customer:order_receipt_pdf' order.pk %}" target="_blank" class="btn btn-primary">Открыть PDF-квитанцию</a>
+                    <a href="{% url 'customer:account' %}" class="btn btn-outline">Личный кабинет</a>
+                </div>
+            </div>
+
+            <div class="checkout-card">
+                <h2 class="checkout-card-title">Услуги в заказе</h2>
+                <ul class="checkout-items">
+                    {% for item in order.items.all %}
+                    <li>
+                        <span>
+                            {{ item.service.name }} × {{ item.quantity }}
+                            {% if item.weight %}<small>{{ item.weight }} кг</small>{% endif %}
+                            {% if item.width and item.length %}<small>{{ item.width }} × {{ item.length }} м</small>{% endif %}
+                        </span>
+                        <strong>{{ item.line_total }} ₽</strong>
+                    </li>
+                    {% endfor %}
+                </ul>
+            </div>
+        </div>
+
+        <div class="checkout-card checkout-receipt-preview">
+            <div class="checkout-receipt-head">
+                <h2 class="checkout-card-title">PDF-квитанция</h2>
+                <a href="{% url 'customer:order_receipt_pdf' order.pk %}" target="_blank" class="btn btn-outline btn-sm">Открыть в новой вкладке</a>
+            </div>
+            <iframe
+                class="checkout-receipt-frame"
+                src="{% url 'customer:order_receipt_pdf' order.pk %}"
+                title="PDF-квитанция заказа № {{ order.pk }}">
+            </iframe>
+        </div>
+    </div>
+</section>
+{% endblock %}

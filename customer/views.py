@@ -1,18 +1,61 @@
 import json
+import os
 import re
+from decimal import Decimal
+from io import BytesIO
+
 from django.db import models
 from django.shortcuts import render, redirect, get_object_or_404
 from django.contrib.auth import login
 from django.contrib.auth.views import LoginView, LogoutView
 from django.contrib.auth.decorators import login_required
 from django.views.generic import CreateView
-from django.urls import reverse_lazy
-from django.http import JsonResponse
+from django.urls import reverse, reverse_lazy
+from django.http import JsonResponse, HttpResponse
 from django.views.decorators.http import require_GET, require_POST
+
+from reportlab.lib.pagesizes import A4
+from reportlab.lib.units import mm
+from reportlab.lib import colors
+from reportlab.pdfgen import canvas
+from reportlab.pdfbase import pdfmetrics
+from reportlab.pdfbase.ttfonts import TTFont
 
 from .models import ChatRoom, ChatMessage
 from .forms import CustomerRegisterForm, CustomerProfileForm
 from core.models import Service, ServiceCategory, HeroBanner, Review, Client, Order, OrderItem, AboutPage, AboutFeature, AboutStep, DeliveryOption
+
+
+_FONT_REGISTERED = False
+_FONT_NAME = 'Helvetica'
+_FONT_BOLD = 'Helvetica-Bold'
+
+
+def _ensure_cyrillic_font():
+    global _FONT_REGISTERED, _FONT_NAME, _FONT_BOLD
+    if _FONT_REGISTERED:
+        return _FONT_NAME, _FONT_BOLD
+    candidates = [
+        ('c:/windows/fonts/arial.ttf', 'c:/windows/fonts/arialbd.ttf'),
+        ('/Library/Fonts/Arial.ttf', '/Library/Fonts/Arial Bold.ttf'),
+        ('/usr/share/fonts/truetype/dejavu/DejaVuSans.ttf',
+         '/usr/share/fonts/truetype/dejavu/DejaVuSans-Bold.ttf'),
+        ('/usr/share/fonts/truetype/freefont/FreeSans.ttf',
+         '/usr/share/fonts/truetype/freefont/FreeSansBold.ttf'),
+    ]
+    for regular, bold in candidates:
+        if os.path.isfile(regular):
+            try:
+                pdfmetrics.registerFont(TTFont('CyrFont', regular))
+                _FONT_NAME = 'CyrFont'
+                if os.path.isfile(bold):
+                    pdfmetrics.registerFont(TTFont('CyrFontBold', bold))
+                    _FONT_BOLD = 'CyrFontBold'
+                break
+            except Exception:
+                pass
+    _FONT_REGISTERED = True
+    return _FONT_NAME, _FONT_BOLD
 
 
 class CustomerLoginView(LoginView):
@@ -34,7 +77,8 @@ class CustomerRegisterView(CreateView):
         user.is_staff = False
         user.save()
         login(self.request, user)
-        return redirect(self.success_url)
+        next_url = self.request.GET.get('next') or self.request.POST.get('next') or self.success_url
+        return redirect(next_url)
 
 
 def customer_home(request):
@@ -133,6 +177,21 @@ def cart_page(request):
     return render(request, 'customer/cart.html')
 
 
+def _client_for_user(user):
+    return Client.objects.filter(phone=user.phone).first()
+
+
+def _order_for_user(user, pk):
+    client = _client_for_user(user)
+    if not client:
+        return None
+    return get_object_or_404(
+        Order.objects.select_related('client', 'delivery_option').prefetch_related('items__service'),
+        pk=pk,
+        client=client,
+    )
+
+
 @login_required
 def account(request):
     """Личный кабинет: профиль и список заказов."""
@@ -144,7 +203,7 @@ def account(request):
             phone=user.phone,
             defaults={'name': user.get_full_name() or user.phone},
         )
-    orders = Order.objects.filter(client=client).select_related('client', 'delivery_option').prefetch_related('items').order_by('-created_at')[:50] if client else []
+    orders = Order.objects.filter(client=client).select_related('client', 'delivery_option').prefetch_related('items__service').order_by('-created_at')[:50] if client else []
 
     if request.method == 'POST':
         form = CustomerProfileForm(request.POST, instance=user)
@@ -230,8 +289,7 @@ def api_delivery_options(request):
 @require_POST
 @login_required
 def api_create_order(request):
-    """Создать заявку из корзины клиента. В теле: items, delivery_option_slug (опционально)."""
-    from decimal import Decimal
+    """Создать заявку из корзины клиента. В теле: items, pickup_method."""
     data = json.loads(request.body)
     items = data.get('items', [])
     if not items:
@@ -244,7 +302,25 @@ def api_create_order(request):
     )
 
     discount = Decimal('3') if client.completed_orders_count() >= 2 else Decimal('0')
-    order = Order.objects.create(client=client, discount_percent=discount)
+
+    pickup = data.get('pickup_method', Order.PICKUP_SELF)
+    if pickup not in (Order.PICKUP_COURIER, Order.PICKUP_SELF):
+        pickup = Order.PICKUP_SELF
+
+    courier_addr = ''
+    if pickup == Order.PICKUP_COURIER:
+        courier_addr = (data.get('courier_address') or '').strip()[:500]
+        if not courier_addr:
+            return JsonResponse({'error': 'Укажите адрес для курьера'}, status=400)
+
+    order = Order.objects.create(
+        client=client,
+        discount_percent=discount,
+        pickup_method=pickup,
+        courier_address=courier_addr,
+        pickup_cost=Decimal('400.00') if pickup == Order.PICKUP_COURIER else Decimal('0'),
+        source=Order.SOURCE_WEB,
+    )
 
     for item in items:
         try:
@@ -261,24 +337,288 @@ def api_create_order(request):
             weight=Decimal(str(item.get('weight', 0))),
         )
 
-    # Способ получения и стоимость доставки
-    delivery_slug = (data.get('delivery_option_slug') or '').strip() or 'pickup'
-    delivery_option = DeliveryOption.objects.filter(slug=delivery_slug).first()
-    if delivery_option:
-        order.delivery_option = delivery_option
-        subtotal = order.get_subtotal()
-        total_kg = sum(
-            (oi.weight or Decimal('0')) * oi.quantity
-            for oi in order.items.all()
-        )
-        order.delivery_cost = delivery_option.compute_cost(subtotal, total_kg)
-        order.save(update_fields=['delivery_option', 'delivery_cost'])
+    if not order.items.exists():
+        order.delete()
+        return JsonResponse({'error': 'Не удалось добавить позиции — проверьте корзину'}, status=400)
 
     return JsonResponse({
         'order_id': order.pk,
+        'payment_url': reverse('customer:order_payment', kwargs={'pk': order.pk}),
+        'complete_url': reverse('customer:order_complete', kwargs={'pk': order.pk}),
+        'subtotal': str(order.get_subtotal()),
+        'pickup_cost': str(order.pickup_cost),
+        'prepayment_amount': str(order.get_prepayment_due()),
         'total': str(order.get_total()),
-        'delivery_cost': str(order.delivery_cost or 0),
     })
+
+
+@login_required
+def order_payment(request, pk):
+    """Страница выбора способа оплаты для только что оформленного заказа."""
+    order = _order_for_user(request.user, pk)
+    if order is None:
+        return HttpResponse('Клиент не найден', status=404)
+    if order.payment_method and request.method == 'GET':
+        return redirect('customer:order_complete', pk=order.pk)
+
+    if request.method == 'POST':
+        payment_method = (request.POST.get('payment_method') or '').strip()
+        valid_methods = {code for code, _ in Order.PAYMENT_CHOICES}
+        if payment_method not in valid_methods:
+            return render(request, 'customer/order_payment.html', {
+                'order': order,
+                'payment_choices': Order.PAYMENT_CHOICES,
+                'error': 'Выберите способ оплаты.',
+                'prepayment_amount': order.get_prepayment_due(),
+                'remaining_amount': order.get_total() - order.get_prepayment_due(),
+            })
+        order.payment_method = payment_method
+        order.prepayment_amount = order.get_prepayment_due()
+        order.save(update_fields=['payment_method', 'prepayment_amount'])
+        return redirect('customer:order_complete', pk=order.pk)
+
+    return render(request, 'customer/order_payment.html', {
+        'order': order,
+        'payment_choices': Order.PAYMENT_CHOICES,
+        'prepayment_amount': order.get_prepayment_due(),
+        'remaining_amount': order.get_total() - order.get_prepayment_due(),
+    })
+
+
+@login_required
+def order_complete(request, pk):
+    """Финальная страница после выбора способа оплаты."""
+    order = _order_for_user(request.user, pk)
+    if order is None:
+        return HttpResponse('Клиент не найден', status=404)
+    if not order.payment_method:
+        return redirect('customer:order_payment', pk=order.pk)
+    return render(request, 'customer/order_complete.html', {
+        'order': order,
+        'prepayment_amount': order.prepayment_amount or order.get_prepayment_due(),
+        'remaining_amount': order.get_remaining_due(),
+    })
+
+
+@require_POST
+@login_required
+def api_request_return_delivery(request, pk):
+    """Запросить доставку готового заказа из личного кабинета."""
+    client = _client_for_user(request.user)
+    if not client:
+        return JsonResponse({'error': 'Клиент не найден'}, status=404)
+    order = get_object_or_404(Order, pk=pk, client=client)
+    if order.status != Order.STATUS_READY:
+        return JsonResponse({'error': 'Заказ ещё не готов'}, status=400)
+    if order.return_delivery_requested:
+        return JsonResponse({'error': 'Доставка уже запрошена'}, status=400)
+
+    delivery_opt = DeliveryOption.objects.filter(slug='delivery').first()
+    if not delivery_opt:
+        return JsonResponse({'error': 'Доставка недоступна'}, status=400)
+
+    subtotal = order.get_subtotal()
+    total_kg = sum(
+        (oi.weight or Decimal('0')) * oi.quantity for oi in order.items.all()
+    )
+    order.delivery_option = delivery_opt
+    order.delivery_cost = delivery_opt.compute_cost(subtotal, total_kg)
+    order.return_delivery_requested = True
+    order.save(update_fields=['delivery_option', 'delivery_cost', 'return_delivery_requested'])
+
+    return JsonResponse({
+        'ok': True,
+        'delivery_cost': str(order.delivery_cost),
+        'total': str(order.get_total()),
+    })
+
+
+@login_required
+def order_receipt_pdf(request, pk):
+    """Генерация PDF-квитанции химчистки."""
+    client = _client_for_user(request.user)
+    if not client:
+        return HttpResponse('Клиент не найден', status=404)
+    order = get_object_or_404(Order, pk=pk, client=client)
+
+    font, font_bold = _ensure_cyrillic_font()
+    buf = BytesIO()
+    w, h = A4
+    c = canvas.Canvas(buf, pagesize=A4)
+
+    margin = 25 * mm
+    y = h - margin
+
+    def text(x, yy, txt, size=10, bold=False):
+        c.setFont(font_bold if bold else font, size)
+        c.drawString(x, yy, str(txt))
+
+    def text_right(x, yy, txt, size=10, bold=False):
+        c.setFont(font_bold if bold else font, size)
+        c.drawRightString(x, yy, str(txt))
+
+    right_edge = w - margin
+
+    # Header
+    text(margin, y, 'КВИТАНЦИЯ ХИМЧИСТКИ', 16, bold=True)
+    y -= 8 * mm
+    text(margin, y, '«Чисто.Тут» — профессиональная химчистка', 10)
+    text_right(right_edge, y, f'Квитанция № {order.pk}', 10, bold=True)
+    y -= 5 * mm
+    text(margin, y, 'г. Ижевск  |  тел. 8 (800) 123-45-67', 9)
+    y -= 4 * mm
+
+    c.setStrokeColor(colors.HexColor('#0d9488'))
+    c.setLineWidth(1.5)
+    c.line(margin, y, right_edge, y)
+    y -= 7 * mm
+
+    # Order info
+    text(margin, y, 'Дата оформления:', 9)
+    from django.utils.timezone import localtime
+    text(margin + 40 * mm, y, localtime(order.created_at).strftime('%d.%m.%Y %H:%M'), 9, bold=True)
+    if order.ready_by:
+        text(right_edge - 70 * mm, y, 'Дата готовности:', 9)
+        text(right_edge - 35 * mm, y, order.ready_by.strftime('%d.%m.%Y'), 9, bold=True)
+    y -= 5 * mm
+
+    text(margin, y, 'Клиент:', 9)
+    text(margin + 35 * mm, y, order.client.name, 9, bold=True)
+    y -= 5 * mm
+    text(margin, y, 'Телефон:', 9)
+    text(margin + 35 * mm, y, order.client.phone, 9, bold=True)
+    y -= 5 * mm
+    text(margin, y, 'Сдача вещей:', 9)
+    text(margin + 35 * mm, y, order.get_pickup_method_display(), 9, bold=True)
+    y -= 5 * mm
+    if order.courier_address:
+        text(margin, y, 'Адрес курьера:', 9)
+        text(margin + 35 * mm, y, order.courier_address[:70], 9, bold=True)
+        y -= 5 * mm
+    if order.payment_method:
+        text(margin, y, 'Оплата:', 9)
+        text(margin + 35 * mm, y, order.get_payment_method_display(), 9, bold=True)
+        y -= 5 * mm
+    text(margin, y, 'Статус:', 9)
+    text(margin + 35 * mm, y, order.get_status_display(), 9, bold=True)
+    y -= 7 * mm
+
+    c.setStrokeColor(colors.HexColor('#e2e8f0'))
+    c.setLineWidth(0.5)
+    c.line(margin, y, right_edge, y)
+    y -= 6 * mm
+
+    # Table header
+    col_x = [margin, margin + 8*mm, margin + 75*mm, margin + 95*mm,
+             margin + 115*mm, margin + 135*mm]
+    text(col_x[0], y, '№', 8, bold=True)
+    text(col_x[1], y, 'Наименование', 8, bold=True)
+    text(col_x[2], y, 'Кол-во', 8, bold=True)
+    text(col_x[3], y, 'Параметры', 8, bold=True)
+    text(col_x[4], y, 'Цена', 8, bold=True)
+    text_right(right_edge, y, 'Сумма', 8, bold=True)
+    y -= 3 * mm
+    c.line(margin, y, right_edge, y)
+    y -= 5 * mm
+
+    items = order.items.select_related('service').all()
+    for idx, item in enumerate(items, 1):
+        if y < margin + 30 * mm:
+            c.showPage()
+            y = h - margin
+
+        text(col_x[0], y, str(idx), 8)
+        name = item.service.name
+        if len(name) > 38:
+            name = name[:36] + '...'
+        text(col_x[1], y, name, 8)
+        text(col_x[2], y, str(item.quantity), 8)
+
+        params = ''
+        if item.width and item.length:
+            params = f'{item.width}×{item.length} м'
+        elif item.weight:
+            params = f'{item.weight} кг'
+        if item.complexity != Decimal('1.0'):
+            params += f'  сл.{item.complexity}'
+        text(col_x[3], y, params, 8)
+
+        text(col_x[4], y, f'{item.unit_price} ₽', 8)
+        line_total = item.get_line_total(order.discount_percent)
+        text_right(right_edge, y, f'{line_total} ₽', 8)
+        y -= 4.5 * mm
+
+    y -= 2 * mm
+    c.line(margin, y, right_edge, y)
+    y -= 6 * mm
+
+    # Totals
+    subtotal = order.get_subtotal()
+    if order.discount_percent > 0:
+        raw = sum(i.get_line_total(Decimal('0')) for i in items)
+        text(right_edge - 80 * mm, y, 'Сумма без скидки:', 9)
+        text_right(right_edge, y, f'{Decimal(raw).quantize(Decimal("0.01"))} ₽', 9)
+        y -= 5 * mm
+        text(right_edge - 80 * mm, y, f'Скидка ({order.discount_percent}%):', 9, bold=True)
+        discount_val = Decimal(raw).quantize(Decimal("0.01")) - subtotal
+        text_right(right_edge, y, f'−{discount_val} ₽', 9, bold=True)
+        y -= 5 * mm
+
+    text(right_edge - 80 * mm, y, 'Подытог:', 9)
+    text_right(right_edge, y, f'{subtotal} ₽', 9)
+    y -= 5 * mm
+
+    if order.pickup_cost and order.pickup_cost > 0:
+        text(right_edge - 80 * mm, y, 'Забор вещей курьером:', 9)
+        text_right(right_edge, y, f'{order.pickup_cost} ₽', 9)
+        y -= 5 * mm
+
+    if order.delivery_cost and order.delivery_cost > 0:
+        text(right_edge - 80 * mm, y, 'Доставка:', 9)
+        text_right(right_edge, y, f'{order.delivery_cost} ₽', 9)
+        y -= 5 * mm
+
+    total = order.get_total()
+    y -= 2 * mm
+    c.setStrokeColor(colors.HexColor('#0d9488'))
+    c.setLineWidth(1)
+    c.line(right_edge - 80 * mm, y, right_edge, y)
+    y -= 6 * mm
+    text(right_edge - 80 * mm, y, 'ИТОГО:', 12, bold=True)
+    text_right(right_edge, y, f'{total} ₽', 12, bold=True)
+    y -= 10 * mm
+
+    prepayment = order.prepayment_amount or order.get_prepayment_due()
+    remaining = order.get_remaining_due()
+    text(right_edge - 80 * mm, y, 'Первый взнос:', 9)
+    text_right(right_edge, y, f'{prepayment} ₽', 9)
+    y -= 5 * mm
+    text(right_edge - 80 * mm, y, 'Остаток при получении:', 9)
+    text_right(right_edge, y, f'{remaining} ₽', 9)
+    y -= 10 * mm
+
+    # Footer notes
+    c.setStrokeColor(colors.HexColor('#e2e8f0'))
+    c.setLineWidth(0.5)
+    c.line(margin, y, right_edge, y)
+    y -= 6 * mm
+    notes = [
+        'Условия приёма:',
+        '• Претензии по качеству принимаются в течение 24 часов после выдачи.',
+        '• Компания не несёт ответственности за содержимое карманов.',
+        '• Срок хранения готового заказа — 30 дней.',
+        '• Окончательная стоимость может быть скорректирована при приёмке вещей.',
+    ]
+    for line in notes:
+        bold = line.endswith(':')
+        text(margin, y, line, 7.5, bold=bold)
+        y -= 4 * mm
+
+    c.save()
+    buf.seek(0)
+    resp = HttpResponse(buf.read(), content_type='application/pdf')
+    resp['Content-Disposition'] = f'inline; filename="receipt_{order.pk}.pdf"'
+    return resp
 
 
 # --- Chat API ---

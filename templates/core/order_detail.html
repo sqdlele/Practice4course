@@ -1,0 +1,133 @@
+{% extends 'base.html' %}
+{% block title %}Заказ #{{ order.pk }} — Чисто.Тут{% endblock %}
+
+{% block content %}
+<div class="dashboard">
+    <div class="od-header">
+        <a href="{% url 'core:home' %}" class="btn btn-ghost btn-sm">&larr; Назад</a>
+        <h1 class="page-title od-title">Заказ #{{ order.pk }}</h1>
+        <span class="status status-{{ order.status }}">{{ order.get_status_display }}</span>
+        {% if order.source == 'web' %}<span class="od-source-badge">Сайт</span>{% endif %}
+    </div>
+
+    <div class="od-grid">
+        <section class="od-card">
+            <h2 class="od-card-title">Клиент</h2>
+            <p><strong>{{ order.client.name }}</strong></p>
+            <p>{{ order.client.phone }}</p>
+            <p class="od-muted">Способ сдачи: {{ order.get_pickup_method_display }}{% if order.courier_address %} — {{ order.courier_address }}{% endif %}</p>
+            {% if order.pickup_cost %}
+            <p class="od-muted">Забор вещей: +{{ order.pickup_cost }} ₽</p>
+            {% endif %}
+            {% if order.payment_method %}
+            <p class="od-muted">Оплата: {{ order.get_payment_method_display }}</p>
+            <p class="od-muted">Первый взнос: {{ order.prepayment_amount }} ₽</p>
+            {% endif %}
+            {% if order.return_delivery_requested and order.delivery_option %}
+            <p class="od-muted">Доставка готового: {{ order.delivery_option.name }} (+{{ order.delivery_cost }} ₽)</p>
+            {% endif %}
+        </section>
+
+        <section class="od-card">
+            <h2 class="od-card-title">Статус и дата</h2>
+            {% if next_statuses %}
+            <form method="post" class="od-inline-form">
+                {% csrf_token %}
+                <input type="hidden" name="action" value="change_status">
+                {% for ns in next_statuses %}
+                <button type="submit" name="status" value="{{ ns.value }}" class="btn btn-primary btn-sm">
+                    &rarr; {{ ns.label }}
+                </button>
+                {% endfor %}
+            </form>
+            {% else %}
+            <p class="od-muted">Финальный статус</p>
+            {% endif %}
+
+            <form method="post" class="od-ready-form">
+                {% csrf_token %}
+                <input type="hidden" name="action" value="set_ready_by">
+                <label for="ready_by">Дата готовности</label>
+                <div class="od-ready-row">
+                    <input type="date" id="ready_by" name="ready_by" class="form-input form-input-sm"
+                           value="{{ order.ready_by|date:'Y-m-d'|default:'' }}">
+                    <button type="submit" class="btn btn-outline btn-sm">Сохранить</button>
+                </div>
+            </form>
+            <p class="od-muted">Оформлен: {{ order.created_at|date:"d.m.Y H:i" }}</p>
+            {% if order.discount_percent %}
+            <p class="od-muted">Скидка: {{ order.discount_percent }}%</p>
+            {% endif %}
+        </section>
+    </div>
+
+    <section class="od-card od-items-card">
+        <h2 class="od-card-title">Позиции заказа</h2>
+        <form method="post" id="items-form">
+            {% csrf_token %}
+            <input type="hidden" name="action" value="update_items">
+            <table class="od-items-table">
+                <thead>
+                    <tr>
+                        <th>Услуга</th>
+                        <th>Кол-во</th>
+                        <th>Цена</th>
+                        <th>Параметры</th>
+                        <th>Сумма</th>
+                        <th></th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for item in order.items.all %}
+                    <tr>
+                        <td>{{ item.service.name }}</td>
+                        <td><input type="number" name="qty_{{ item.pk }}" value="{{ item.quantity }}" min="1" class="form-input form-input-sm od-input-num"></td>
+                        <td><input type="number" name="price_{{ item.pk }}" value="{{ item.unit_price }}" step="0.01" min="0" class="form-input form-input-sm od-input-price"></td>
+                        <td class="od-muted">
+                            {% if item.width and item.length %}{{ item.width }}×{{ item.length }} м{% endif %}
+                            {% if item.weight %}{{ item.weight }} кг{% endif %}
+                            {% if item.complexity != 1.0 %}сл.{{ item.complexity }}{% endif %}
+                        </td>
+                        <td><strong>{{ item.line_total }} ₽</strong></td>
+                        <td>
+                            <button type="submit" form="delete-item-{{ item.pk }}" class="btn btn-ghost btn-sm od-btn-del" title="Удалить">&times;</button>
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+            <div class="od-items-actions">
+                <button type="submit" class="btn btn-primary btn-sm">Сохранить изменения</button>
+            </div>
+        </form>
+        {% for item in order.items.all %}
+        <form method="post" id="delete-item-{{ item.pk }}" style="display:none">
+            {% csrf_token %}
+            <input type="hidden" name="action" value="delete_item">
+            <input type="hidden" name="item_id" value="{{ item.pk }}">
+        </form>
+        {% endfor %}
+
+        <div class="od-total-row">
+            <span>Подытог:</span>
+            <strong>{{ order.get_subtotal }} ₽</strong>
+        </div>
+        {% if order.pickup_cost %}
+        <div class="od-total-row">
+            <span>Забор вещей:</span>
+            <strong>{{ order.pickup_cost }} ₽</strong>
+        </div>
+        {% endif %}
+        {% if order.delivery_cost %}
+        <div class="od-total-row">
+            <span>Доставка:</span>
+            <strong>{{ order.delivery_cost }} ₽</strong>
+        </div>
+        {% endif %}
+        <div class="od-total-row od-total-grand">
+            <span>Итого:</span>
+            <strong>{{ order.get_total }} ₽</strong>
+        </div>
+    </section>
+</div>
+{% endblock %}

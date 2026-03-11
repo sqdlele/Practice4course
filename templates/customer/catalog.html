@@ -3,6 +3,12 @@
 {% block title %}Услуги — Чисто.Тут{% endblock %}
 
 {% block content %}
+<nav class="breadcrumbs">
+    <a href="{% url 'customer:home' %}">Главная</a>
+    <span class="bc-sep">/</span>
+    <span>Услуги</span>
+</nav>
+
 <section class="catalog-hero">
     <h1>Наши услуги</h1>
     <p class="catalog-hero-sub">Выберите категорию, чтобы увидеть полный список услуг и цены</p>
@@ -21,7 +27,7 @@
         </div>
         <div class="cat-tags">
             {% for svc in cat.services.all %}
-            <a href="{% url 'customer:category' cat.slug %}" class="cat-tag">{{ svc.name }}</a>
+            <a href="{% url 'customer:service_detail' cat.slug svc.pk %}" class="cat-tag">{{ svc.name }}</a>
             {% endfor %}
         </div>
     </div>

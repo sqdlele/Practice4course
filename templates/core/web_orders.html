@@ -1,0 +1,66 @@
+{% extends 'base.html' %}
+{% block title %}Заявки с сайта — Чисто.Тут{% endblock %}
+
+{% block content %}
+<div class="dashboard">
+    <a href="{% url 'core:home' %}" class="btn btn-outline btn-sm" style="margin-bottom:12px">&larr; На главную</a>
+    <div class="web-orders-header">
+        <h1 class="page-title">Заявки с сайта</h1>
+        {% if new_count %}
+        <span class="web-orders-badge-lg">{{ new_count }} новых</span>
+        {% endif %}
+    </div>
+
+    {% if orders %}
+    <div class="web-orders-list">
+        {% for order in orders %}
+        <div class="web-order-card {% if order.status == 'accepted' %}web-order-card--new{% endif %}">
+            <div class="web-order-head">
+                <a href="{% url 'core:order_detail' order.pk %}" class="web-order-num web-order-link">Заказ #{{ order.pk }}</a>
+                <span class="web-order-date">{{ order.created_at|date:"d.m.Y H:i" }}</span>
+                <span class="status status-{{ order.status }}">{{ order.get_status_display }}</span>
+                <a href="{% url 'core:order_detail' order.pk %}" class="btn btn-outline btn-sm" style="margin-left:auto">Открыть</a>
+            </div>
+            <div class="web-order-body">
+                <div class="web-order-info">
+                    <p><strong>Клиент:</strong> {{ order.client.name }}</p>
+                    <p><strong>Телефон:</strong> {{ order.client.phone }}</p>
+                    <p><strong>Сдача:</strong> {{ order.get_pickup_method_display }}{% if order.courier_address %} — {{ order.courier_address }}{% endif %}</p>
+                    {% if order.pickup_cost %}
+                    <p><strong>Забор вещей:</strong> {{ order.pickup_cost }} ₽</p>
+                    {% endif %}
+                    {% if order.payment_method %}
+                    <p><strong>Оплата:</strong> {{ order.get_payment_method_display }}</p>
+                    <p><strong>Первый взнос:</strong> {{ order.prepayment_amount }} ₽</p>
+                    {% endif %}
+                    {% if order.discount_percent %}
+                    <p><strong>Скидка:</strong> {{ order.discount_percent }}%</p>
+                    {% endif %}
+                </div>
+                <div class="web-order-items">
+                    <table class="web-order-items-table">
+                        <thead>
+                            <tr><th>Услуга</th><th>Кол-во</th><th>Цена</th><th>Сумма</th></tr>
+                        </thead>
+                        <tbody>
+                            {% for item in order.items.all %}
+                            <tr>
+                                <td>{{ item.service.name }}</td>
+                                <td>{{ item.quantity }}</td>
+                                <td>{{ item.unit_price }} ₽</td>
+                                <td>{{ item.line_total }} ₽</td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                    <p class="web-order-total"><strong>Итого: {{ order.get_total }} ₽</strong></p>
+                </div>
+            </div>
+        </div>
+        {% endfor %}
+    </div>
+    {% else %}
+    <p class="empty">Нет заявок с сайта.</p>
+    {% endif %}
+</div>
+{% endblock %}
