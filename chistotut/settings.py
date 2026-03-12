@@ -110,7 +110,7 @@ AUTH_PASSWORD_VALIDATORS = [
 
 LANGUAGE_CODE = 'ru-ru'
 
-TIME_ZONE = 'Europe/Samara'  # Москва+1 (UTC+4)
+TIME_ZONE = 'Europe/Samara'
 
 USE_I18N = True
 
