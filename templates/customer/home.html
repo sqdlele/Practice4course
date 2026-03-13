@@ -12,8 +12,8 @@
             <img src="{{ banner.image.url }}" alt="{{ banner.title }}">
             {% if banner.title %}
             <div class="slide-overlay">
-                <h2>{{ banner.title }}</h2>
-                {% if banner.subtitle %}<p>{{ banner.subtitle }}</p>{% endif %}
+                <!-- <h2>{{ banner.title }}</h2>
+                {% if banner.subtitle %}<p>{{ banner.subtitle }}</p>{% endif %} -->
             </div>
             {% endif %}
         </div>
@@ -24,7 +24,7 @@
     <button class="slider-btn slider-next" id="slider-next">&rsaquo;</button>
     <div class="slider-dots" id="slider-dots">
         {% for banner in banners %}
-        <span class="dot {% if forloop.first %}active{% endif %}" data-idx="{{ forloop.counter0 }}"></span>
+        <!-- <span class="dot {% if forloop.first %}active{% endif %}" data-idx="{{ forloop.counter0 }}"></span> -->
         {% endfor %}
     </div>
     {% endif %}
@@ -203,7 +203,7 @@ ymaps.ready(function(){
 <script>
 
     
-/* Карточки услуг: количество + размеры + корзина */
+// Карточки услуг количествоб, размеры, корзина 
 (function(){
     document.querySelectorAll('.svc-card').forEach(function(card){
         var id = parseInt(card.dataset.id);
@@ -303,7 +303,7 @@ ymaps.ready(function(){
     });
 })();
 
-/* Баннер-слайдер */
+//  слайдер
 (function(){
     const track = document.getElementById('slider-track');
     if (!track) return;
@@ -321,10 +321,10 @@ ymaps.ready(function(){
     prev.addEventListener('click', () => go(idx - 1));
     next.addEventListener('click', () => go(idx + 1));
     dots.forEach(d => d.addEventListener('click', () => go(+d.dataset.idx)));
-    setInterval(() => go(idx + 1), 5000);
+    setInterval(() => go(idx + 1), 15000);
 })();
 
-/* Отзывы — горизонтальная прокрутка */
+//  Отзывы  
 (function(){
     const track = document.getElementById('reviews-track');
     if (!track) return;

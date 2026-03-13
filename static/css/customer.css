@@ -200,21 +200,21 @@ html, body {
 .slide {
     min-width: 100%;
     position: relative;
+    height: 440px;
     min-height: 440px;
     background: #e2e8f0;
 }
 .slide img {
     width: 100%;
-    height: 440px;
-    min-height: 440px;
+    height: 100%;
     object-fit: cover;
+    object-position: center;
     display: block;
 }
 .slide-overlay {
     position: absolute;
     bottom: 0; left: 0; right: 0;
     padding: 2rem;
-    background: linear-gradient(transparent, rgba(0,0,0,.55));
     color: #fff;
 }
 .slide-overlay h2 { margin: 0 0 .25rem; font-size: 1.5rem; }
@@ -226,7 +226,7 @@ html, body {
     transform: translateY(-50%);
     background: rgba(255,255,255,.85);
     border: none;
-    width: 40px; height: 40px;
+    width: 30px; height: 30px;
     border-radius: 50%;
     font-size: 1.4rem;
     cursor: pointer;
@@ -265,6 +265,49 @@ html, body {
         margin-right: 0;
         max-width: none;
     }
+}
+
+/* Баннер на телефонах: меньше высота, картинка целиком (текст не обрезается) */
+@media (max-width: 768px) {
+    .hero-slider {
+        height: 200px;
+        min-height: 200px;
+    }
+    .slider-track {
+        height: 200px;
+        min-height: 200px;
+    }
+    .slide {
+        height: 200px;
+        min-height: 200px;
+    }
+    .slide img {
+        object-fit: contain;
+        object-position: center;
+    }
+}
+@media (max-width: 480px) {
+    .hero-slider {
+        height: 160px;
+        min-height: 160px;
+    }
+    .slider-track {
+        height: 160px;
+        min-height: 160px;
+    }
+    .slide {
+        height: 160px;
+        min-height: 160px;
+    }
+    .slide img {
+        object-fit: contain;
+        object-position: center;
+    }
+    .slide-overlay {
+        padding: 1rem;
+    }
+    .slide-overlay h2 { font-size: 1.15rem; }
+    .slide-overlay p { font-size: 0.85rem; }
 }
 
 .hero-placeholder {
@@ -843,6 +886,186 @@ width: 100%; /* Занимает всю ширину родителя */
 }
 @media (max-width: 520px) {
     .catalog-cats { grid-template-columns: 1fr; }
+}
+
+/* ===== New Catalog page (cl-*) ===== */
+.cl-title {
+    font-size: 1.8rem;
+    margin: 0 0 1.25rem;
+}
+.cl-layout {
+    display: grid;
+    grid-template-columns: 1fr 300px;
+    gap: 1.5rem;
+    align-items: start;
+}
+.cl-main { min-width: 0; }
+
+/* Search */
+.cl-search-wrap {
+    position: relative;
+    display: flex;
+    align-items: center;
+    margin-bottom: 1rem;
+}
+.cl-search-icon {
+    position: absolute;
+    left: .85rem;
+    color: var(--text-muted);
+    pointer-events: none;
+    flex-shrink: 0;
+}
+.cl-search-input {
+    width: 100%;
+    padding: .65rem 2.5rem .65rem 2.4rem;
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    font-size: 1rem;
+    font-family: inherit;
+    background: var(--surface);
+    color: var(--text);
+    transition: border-color .15s;
+    box-sizing: border-box;
+}
+.cl-search-input:focus {
+    outline: none;
+    border-color: var(--primary);
+}
+.cl-search-clear {
+    position: absolute;
+    right: .75rem;
+    background: none;
+    border: none;
+    cursor: pointer;
+    color: var(--text-muted);
+    font-size: 1rem;
+    padding: 0;
+    line-height: 1;
+}
+.cl-search-clear:hover { color: var(--text); }
+
+/* Tabs */
+.cl-tabs {
+    display: flex;
+    flex-wrap: wrap;
+    gap: .4rem;
+    margin-bottom: 1rem;
+}
+.cl-tab {
+    padding: .45rem .9rem;
+    border: 1px solid var(--border);
+    border-radius: 20px;
+    background: var(--surface);
+    color: var(--text);
+    font-size: .9rem;
+    font-family: inherit;
+    cursor: pointer;
+    transition: background .15s, color .15s, border-color .15s;
+    white-space: nowrap;
+}
+.cl-tab:hover { border-color: var(--primary); color: var(--primary); }
+.cl-tab.active {
+    background: var(--primary);
+    border-color: var(--primary);
+    color: #fff;
+}
+
+/* Table */
+.cl-table {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    overflow: hidden;
+}
+.cl-table-head {
+    display: grid;
+    grid-template-columns: 1fr 120px 110px;
+    padding: .65rem 1rem;
+    background: var(--bg);
+    border-bottom: 1px solid var(--border);
+    font-size: .8rem;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: .04em;
+    color: var(--text-muted);
+}
+.cl-row {
+    display: grid;
+    grid-template-columns: 1fr 120px 110px;
+    align-items: center;
+    padding: .7rem 1rem;
+    border-bottom: 1px solid var(--border);
+    transition: background .12s;
+}
+.cl-row:last-child { border-bottom: none; }
+.cl-row:hover { background: var(--bg); }
+.cl-col-name { font-size: .95rem; }
+.cl-row-parent {
+    display: block;
+    font-size: .78rem;
+    color: var(--text-muted);
+    margin-bottom: .1rem;
+}
+.cl-row-child { font-size: .95rem; }
+.cl-col-price {
+    font-weight: 600;
+    font-size: .95rem;
+    color: var(--text);
+}
+.cl-col-action { display: flex; justify-content: flex-end; }
+.cl-add-btn { font-size: .85rem; padding: .4rem .9rem; }
+.cl-btn-in-cart { background: #0f766e !important; }
+.cl-empty, .cl-no-results {
+    padding: 2rem;
+    text-align: center;
+    color: var(--text-muted);
+}
+
+/* Sidebar */
+.cl-sidebar { position: sticky; top: 80px; }
+.cl-calc {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    padding: 1.25rem;
+}
+.cl-calc-title {
+    font-size: 1rem;
+    font-weight: 600;
+    margin: 0 0 1rem;
+    text-align: center;
+    line-height: 1.4;
+}
+.cl-calc-total {
+    display: flex;
+    justify-content: space-between;
+    align-items: baseline;
+    margin-bottom: .75rem;
+    font-size: 1rem;
+}
+.cl-calc-label { color: var(--text-muted); }
+.cl-calc-sum { font-size: 1.4rem; font-weight: 700; color: var(--primary); }
+.cl-calc-items { font-size: .85rem; margin-bottom: .75rem; }
+.cl-calc-line {
+    display: flex;
+    justify-content: space-between;
+    gap: .5rem;
+    padding: .25rem 0;
+    border-bottom: 1px solid var(--border);
+    color: var(--text-muted);
+}
+.cl-calc-cart-btn { width: 100%; text-align: center; margin-top: .5rem; }
+
+/* Responsive */
+@media (max-width: 900px) {
+    .cl-layout { grid-template-columns: 1fr; }
+    .cl-sidebar { position: static; }
+}
+@media (max-width: 560px) {
+    .cl-table-head { grid-template-columns: 1fr 90px 90px; }
+    .cl-row { grid-template-columns: 1fr 90px 90px; }
+    .cl-col-price { font-size: .85rem; }
+    .cl-add-btn { font-size: .8rem; padding: .4rem .6rem; }
 }
 
 /* Cart page */

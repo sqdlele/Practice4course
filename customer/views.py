@@ -3,7 +3,6 @@ import os
 import re
 from decimal import Decimal
 from io import BytesIO
-
 from django.db import models
 from django.shortcuts import render, redirect, get_object_or_404
 from django.contrib.auth import login
@@ -13,14 +12,12 @@ from django.views.generic import CreateView
 from django.urls import reverse, reverse_lazy
 from django.http import JsonResponse, HttpResponse
 from django.views.decorators.http import require_GET, require_POST
-
 from reportlab.lib.pagesizes import A4
 from reportlab.lib.units import mm
 from reportlab.lib import colors
 from reportlab.pdfgen import canvas
 from reportlab.pdfbase import pdfmetrics
 from reportlab.pdfbase.ttfonts import TTFont
-
 from .models import ChatRoom, ChatMessage
 from .forms import CustomerRegisterForm, CustomerProfileForm, OrderReviewForm
 from core.models import Service, ServiceCategory, HeroBanner, Review, Client, Order, OrderItem, AboutPage, AboutFeature, AboutStep, DeliveryOption
@@ -82,7 +79,7 @@ class CustomerRegisterView(CreateView):
 
 
 def customer_home(request):
-    """Главная: слайдер, популярные услуги, категории, карта, отзывы."""
+    # слайдер, популярные услуги, категории, карта, отзывы
     popular = Service.objects.filter(is_popular=True, parent__isnull=True)[:6]
     if not popular.exists():
         popular = Service.objects.filter(parent__isnull=True).order_by('?')[:6]
@@ -98,7 +95,6 @@ def customer_home(request):
 
 
 def about(request):
-    """Страница «О нас»: контент из БД и вычисляемые показатели."""
     about_page = AboutPage.get_single()
     features = list(AboutFeature.objects.all())
     steps = list(AboutStep.objects.all())
@@ -143,15 +139,46 @@ def about(request):
 
 
 def catalog(request):
-    """Каталог: список категорий с превью услуг."""
-    categories = ServiceCategory.objects.prefetch_related('services').all()
+    categories = ServiceCategory.objects.prefetch_related(
+        'services__children'
+    ).all()
+    # Строим плоский список всех услуг для шаблона (parent=None — корневые)
+    all_services = []
+    for cat in categories:
+        for svc in cat.services.filter(parent__isnull=True):
+            if svc.children.exists():
+                for child in svc.children.all():
+                    all_services.append({
+                        'id': child.pk,
+                        'name': f'{svc.name} — {child.name}',
+                        'short_name': child.name,
+                        'parent_name': svc.name,
+                        'price_label': child.price_label,
+                        'cat_id': cat.pk,
+                        'cat_name': cat.name,
+                        'cat_slug': cat.slug,
+                        'svc_pk': svc.pk,
+                    })
+            else:
+                all_services.append({
+                    'id': svc.pk,
+                    'name': svc.name,
+                    'short_name': svc.name,
+                    'parent_name': '',
+                    'price_label': svc.price_label,
+                    'cat_id': cat.pk,
+                    'cat_name': cat.name,
+                    'cat_slug': cat.slug,
+                    'svc_pk': svc.pk,
+                })
     return render(request, 'customer/catalog.html', {
         'categories': categories,
+        'all_services': all_services,
     })
 
 
 def category_detail(request, slug):
-    """Услуги конкретной категории (только top-level)."""
+    # Услуги конкретной категории 
     cat = get_object_or_404(ServiceCategory, slug=slug)
     services = cat.services.filter(parent__isnull=True)
     return render(request, 'customer/category.html', {
@@ -161,7 +188,7 @@ def category_detail(request, slug):
 
 
 def service_detail(request, slug, pk):
-    """Страница конкретной услуги с вариантами/ценами."""
+    # Страница конкретной услуги с вариантами/ценами
     cat = get_object_or_404(ServiceCategory, slug=slug)
     service = get_object_or_404(Service, pk=pk, category=cat, parent__isnull=True)
     children = service.children.all()
@@ -173,7 +200,7 @@ def service_detail(request, slug, pk):
 
 
 def cart_page(request):
-    """Страница корзины (рендер; данные из localStorage)."""
+    # Страница корзины (рендерит данные из localStorage).
     return render(request, 'customer/cart.html')
 
 
@@ -194,7 +221,7 @@ def _order_for_user(user, pk):
 
 @login_required
 def account(request):
-    """Личный кабинет: профиль и список заказов."""
+    # профиль и список заказов
     user = request.user
     from django.contrib import messages
     client = Client.objects.filter(phone=user.phone).first()
@@ -225,7 +252,6 @@ def account(request):
 
 @login_required
 def account_edit(request):
-    """Редактирование профиля."""
     if request.method == 'POST':
         form = CustomerProfileForm(request.POST, instance=request.user)
         if form.is_valid():
@@ -240,7 +266,7 @@ def account_edit(request):
 
 @require_GET
 def api_services(request):
-    """JSON-список услуг для JS-корзины."""
+    # JSON-список услуг для JS-корзины.
     qs = Service.objects.select_related('category', 'parent').all()
     data = []
     for s in qs:
@@ -262,10 +288,8 @@ def api_services(request):
 
 @require_GET
 def api_delivery_options(request):
-    """
-    Список способов получения с рассчитанной стоимостью.
-    GET-параметры: cart_total (сумма корзины), cart_kg (общий вес в кг, опционально).
-    """
+    # Список способов получения с рассчитанной стоимостью.
+        
     from decimal import Decimal
     try:
         cart_total = Decimal(request.GET.get('cart_total', '0'))
@@ -291,7 +315,7 @@ def api_delivery_options(request):
 @require_POST
 @login_required
 def api_create_order(request):
-    """Создать заявку из корзины клиента. В теле: items, pickup_method."""
+    # Создать заявку из корзины клиента. В теле: items, pickup_method.
     data = json.loads(request.body)
     items = data.get('items', [])
     if not items:
@@ -356,7 +380,7 @@ def api_create_order(request):
 
 @login_required
 def order_payment(request, pk):
-    """Страница выбора способа оплаты для только что оформленного заказа."""
+    # Страница выбора способа оплаты для только что оформленного заказа
     order = _order_for_user(request.user, pk)
     if order is None:
         return HttpResponse('Клиент не найден', status=404)
@@ -389,7 +413,7 @@ def order_payment(request, pk):
 
 @login_required
 def order_complete(request, pk):
-    """Финальная страница после выбора способа оплаты."""
+    # Финальная страница после выбора способа оплаты
     order = _order_for_user(request.user, pk)
     if order is None:
         return HttpResponse('Клиент не найден', status=404)
@@ -404,7 +428,7 @@ def order_complete(request, pk):
 
 @login_required
 def order_review(request, pk):
-    """Оставить отзыв по выданному заказу (доступно после статуса «Выдано»)."""
+    # oставить отзыв по выданному заказу """
     from django.contrib import messages
     order = _order_for_user(request.user, pk)
     if order is None:
@@ -437,7 +461,7 @@ def order_review(request, pk):
 @require_POST
 @login_required
 def api_request_return_delivery(request, pk):
-    """Запросить доставку готового заказа из личного кабинета."""
+    # Запросить доставку готового заказа 
     client = _client_for_user(request.user)
     if not client:
         return JsonResponse({'error': 'Клиент не найден'}, status=404)
@@ -469,7 +493,7 @@ def api_request_return_delivery(request, pk):
 
 @login_required
 def order_receipt_pdf(request, pk):
-    """Генерация PDF-квитанции химчистки."""
+    # Генерация pdf
     client = _client_for_user(request.user)
     if not client:
         return HttpResponse('Клиент не найден', status=404)
@@ -493,7 +517,7 @@ def order_receipt_pdf(request, pk):
 
     right_edge = w - margin
 
-    # Header
+    
     text(margin, y, 'КВИТАНЦИЯ ХИМЧИСТКИ', 16, bold=True)
     y -= 8 * mm
     text(margin, y, '«Чисто.Тут» — профессиональная химчистка', 10)
@@ -507,7 +531,7 @@ def order_receipt_pdf(request, pk):
     c.line(margin, y, right_edge, y)
     y -= 7 * mm
 
-    # Order info
+    # Информация о заказе
     text(margin, y, 'Дата оформления:', 9)
     from django.utils.timezone import localtime
     text(margin + 40 * mm, y, localtime(order.created_at).strftime('%d.%m.%Y %H:%M'), 9, bold=True)
@@ -542,7 +566,7 @@ def order_receipt_pdf(request, pk):
     c.line(margin, y, right_edge, y)
     y -= 6 * mm
 
-    # Table header
+    # Заголовок таблицы
     col_x = [margin, margin + 8*mm, margin + 75*mm, margin + 95*mm,
              margin + 115*mm, margin + 135*mm]
     text(col_x[0], y, '№', 8, bold=True)
@@ -586,7 +610,7 @@ def order_receipt_pdf(request, pk):
     c.line(margin, y, right_edge, y)
     y -= 6 * mm
 
-    # Totals
+    # Итоги
     subtotal = order.get_subtotal()
     if order.discount_percent > 0:
         raw = sum(i.get_line_total(Decimal('0')) for i in items)
@@ -638,10 +662,10 @@ def order_receipt_pdf(request, pk):
     y -= 6 * mm
     notes = [
         'Условия приёма:',
-        '• Претензии по качеству принимаются в течение 24 часов после выдачи.',
-        '• Компания не несёт ответственности за содержимое карманов.',
-        '• Срок хранения готового заказа — 30 дней.',
-        '• Окончательная стоимость может быть скорректирована при приёмке вещей.',
+        '* Претензии по качеству принимаются в течение 24 часов после выдачи.',
+        '* Проверяйте вещи перед выдачей. Компания не несёт ответственности за содержимое карманов.',
+        '* Срок хранения готового заказа — 30 дней.',
+        '* Окончательная стоимость может быть скорректирована при приёмке вещей.',
     ]
     for line in notes:
         bold = line.endswith(':')
@@ -655,7 +679,7 @@ def order_receipt_pdf(request, pk):
     return resp
 
 
-# --- Chat API ---
+# Чат
 
 def _get_or_create_room(user):
     room, _ = ChatRoom.objects.get_or_create(user=user)
@@ -671,7 +695,6 @@ def chat_messages(request):
     msgs = list(room.messages.filter(pk__gt=after_id).values(
         'id', 'text', 'is_staff_message', 'created_at',
     ))
-    # При первом заходе (after=0) и пустой переписке — приветственное сообщение
     if after_id == 0 and not msgs:
         from django.utils import timezone
         welcome = {
@@ -681,7 +704,7 @@ def chat_messages(request):
             'time': timezone.now().strftime('%H:%M'),
         }
         return JsonResponse({'messages': [welcome]})
-    # Отметить прочитанными сообщения от поддержки
+
     room.messages.filter(is_staff_message=True, is_read=False).update(is_read=True)
     return JsonResponse({
         'messages': [
