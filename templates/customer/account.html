@@ -3,59 +3,434 @@
 {% block title %}Личный кабинет — Чисто.Тут{% endblock %}
 
 {% block content %}
-<div class="account-page">
-    <h1 class="account-title">Личный кабинет</h1>
-
-    {% if messages %}
-    <ul class="messages account-messages">
-        {% for message in messages %}
-        <li class="message message-{{ message.tags }}">{{ message }}</li>
-        {% endfor %}
-    </ul>
-    {% endif %}
-
-    <section class="account-section account-profile">
-        <h2>Профиль</h2>
-        <div class="account-profile-card">
-            <dl class="account-dl">
-                <dt>ФИО</dt>
-                <dd>{{ user.get_full_name|default:"—" }}</dd>
-                <dt>Телефон</dt>
-                <dd>{{ user.phone }}</dd>
-                <dt>Email</dt>
-                <dd>{{ user.email|default:"—" }}</dd>
-            </dl>
-            <a href="{% url 'customer:account_edit' %}" class="btn btn-ghost">Редактировать профиль</a>
+<div class="account-page account-layout">
+    <aside class="account-sidebar">
+        <div class="account-sidebar-profile">
+            <span class="account-avatar" aria-hidden="true">{{ user.first_name|slice:":1"|default:user.phone|slice:":1" }}</span>
+            <span class="account-sidebar-name">{{ user.get_full_name|default:"Имя не указано" }}</span>
+            <button type="button" class="account-sidebar-edit" data-account-edit-open>
+                Редактировать профиль
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M5 12h14M12 5l7 7-7 7"/></svg>
+            </button>
         </div>
-    </section>
 
-    <section class="account-section account-orders">
-        <h2>Мои заказы</h2>
-        {% if orders %}
-        <div class="account-orders-list">
-            {% for order in orders %}
-            <div class="account-order-card">
-                <div class="account-order-head">
-                    <span class="account-order-num">Заказ № {{ order.pk }}</span>
-                    <span class="account-order-date">{{ order.created_at|date:"d.m.Y H:i" }}</span>
-                    <span class="account-order-status account-order-status-{{ order.status }}">{{ order.get_status_display }}</span>
-                </div>
-                <div class="account-order-body">
-                    <p class="account-order-ready">Готовность: {% if order.ready_by %}{{ order.ready_by|date:"d.m.Y" }}{% else %}—{% endif %}</p>
-                    <ul class="account-order-items">
-                        {% for item in order.items.all %}
-                        <li>{{ item.service.name }} — {{ item.quantity }} шт. × {{ item.unit_price }} ₽</li>
-                        {% endfor %}
-                    </ul>
-                    <p class="account-order-total">Итого: <strong>{{ order.get_total }} ₽</strong></p>
+        <div class="account-loyalty-card{% if has_discount_3 %} account-loyalty-card--active{% endif %}">
+            <span class="account-loyalty-title">Выгода</span>
+            {% if has_discount_3 %}
+            <span class="account-loyalty-badge" aria-hidden="true">−3%</span>
+            {% endif %}
+            <p class="account-loyalty-text">
+                {% if has_discount_3 %}
+                    У вас скидка 3% на каждый заказ
+                {% else %}
+                    Скидка 3% после второго выданного заказа
+                {% endif %}
+            </p>
+        </div>
+
+        <div class="account-benefits">
+            <div class="account-benefit-chip">Бесплатная доставка от 2000 ₽</div>
+            <div class="account-benefit-chip">Гарантия на все работы</div>
+        </div>
+
+        <nav class="account-sidebar-nav">
+            <span class="account-nav-heading">Управление</span>
+            <button type="button" class="account-nav-link" data-account-edit-open>
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg>
+                Настройки профиля
+            </button>
+            <a href="{% url 'customer:home' %}#services" class="account-nav-link">
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/><polyline points="10 9 9 9 8 9"/></svg>
+                Услуги и цены
+            </a>
+        </nav>
+    </aside>
+
+    <main class="account-main">
+        <h1 class="account-title">Личный кабинет</h1>
+
+        <div class="account-modules">
+            <div class="account-module account-module-profile">
+                <h2 class="account-module-title">Профиль</h2>
+                <div class="account-module-body">
+                    <p class="account-module-row"><span class="account-module-label">ФИО</span> {{ user.get_full_name|default:"—" }}</p>
+                    <p class="account-module-row"><span class="account-module-label">Телефон</span> {{ user.phone }}</p>
+                    <p class="account-module-row"><span class="account-module-label">Email</span> {{ user.email|default:"—" }}</p>
+                    <button type="button" class="btn btn-primary account-module-btn" data-account-edit-open>Редактировать</button>
                 </div>
             </div>
-            {% endfor %}
+
+            <div class="account-module account-module-orders-summary">
+                <h2 class="account-module-title">Мои заказы</h2>
+                <div class="account-module-body">
+                    {% if orders %}
+                    <p class="account-orders-count">Всего заказов: <strong>{{ orders|length }}</strong></p>
+                    <a href="#account-orders-list" class="btn btn-primary account-module-btn">Смотреть все</a>
+                    {% else %}
+                    <p class="account-empty">Пока пусто</p>
+                    <a href="{% url 'customer:home' %}#services" class="btn btn-primary account-module-btn">Выбрать услуги</a>
+                    {% endif %}
+                </div>
+            </div>
         </div>
-        {% else %}
-        <p class="account-empty">У вас пока нет заказов.</p>
-        <a href="{% url 'customer:home' %}#services" class="btn btn-primary">Выбрать услуги</a>
+
+        <div class="account-promo-card">
+            <div class="account-promo-content">
+                <span class="account-promo-badge">Чисто.Тут</span>
+                <h3 class="account-promo-title">Качественная химчистка с заботой о ваших вещах</h3>
+                <p class="account-promo-text">Заказывайте онлайн — заберём и привезём обратно. Первый заказ со скидкой.</p>
+                <a href="{% url 'customer:home' %}#services" class="btn account-promo-btn">За покупками</a>
+            </div>
+            <div class="account-promo-visual" aria-hidden="true"></div>
+        </div>
+
+        <section class="account-section account-orders account-section-collapsible" id="account-orders-list">
+            <button type="button" class="account-section-toggle" aria-expanded="false" aria-controls="account-orders-content" id="account-orders-toggle">
+                <span class="account-section-title">История заказов</span>
+                <svg class="account-section-chevron" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M6 9l6 6 6-6"/></svg>
+            </button>
+            <div class="account-section-content account-section-content-collapsed" id="account-orders-content">
+            {% if orders %}
+            <div class="account-orders-list">
+                {% for order in orders %}
+                <div class="account-order-card account-order-card-collapsible">
+                    <button type="button" class="account-order-head account-order-toggle" aria-expanded="false" aria-controls="account-order-body-{{ order.pk }}" data-order-body="account-order-body-{{ order.pk }}">
+                        <span class="account-order-num">Заказ № {{ order.pk }}</span>
+                        <span class="account-order-date">{{ order.created_at|date:"d.m.Y H:i" }}</span>
+                        <span class="account-order-total-head">Итого: <strong>{{ order.get_total }} ₽</strong></span>
+                        <span class="account-order-status account-order-status-{{ order.status }}">{{ order.get_status_display }}</span>
+                        <svg class="account-order-chevron" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M6 9l6 6 6-6"/></svg>
+                    </button>
+                    <div class="account-order-body" id="account-order-body-{{ order.pk }}" hidden>
+                        <div class="account-order-details-grid">
+                            <p class="account-order-ready"><span class="account-order-detail-label">Готовность:</span> {% if order.ready_by %}{{ order.ready_by|date:"d.m.Y" }}{% else %}—{% endif %}</p>
+                            <p class="account-order-pickup"><span class="account-order-detail-label">Сдача вещей:</span> {{ order.get_pickup_method_display }}</p>
+                            {% if order.pickup_cost %}
+                            <p class="account-order-delivery"><span class="account-order-detail-label">Прием вещей:</span> + {{ order.pickup_cost }} ₽</p>
+                            {% endif %}
+                            {% if order.payment_method %}
+                            <p class="account-order-delivery"><span class="account-order-detail-label">Оплата:</span> {{ order.get_payment_method_display }}</p>
+                            <p class="account-order-delivery"><span class="account-order-detail-label">Первый взнос:</span> {% if order.prepayment_amount %}{{ order.prepayment_amount }}{% else %}{{ order.get_prepayment_due }}{% endif %} ₽</p>
+                            {% endif %}
+                            {% if order.return_delivery_requested and order.delivery_option %}
+                            <p class="account-order-delivery"><span class="account-order-detail-label">Доставка готового:</span> {{ order.delivery_option.name }}{% if order.delivery_cost %} (+ {{ order.delivery_cost }} ₽){% endif %}</p>
+                            {% endif %}
+                        </div>
+                        <ul class="account-order-items">
+                            {% for item in order.items.all %}
+                            <li>{{ item.service.name }} — {{ item.quantity }} шт. × {{ item.unit_price }} ₽ = {{ item.line_total }} ₽</li>
+                            {% endfor %}
+                        </ul>
+                        <div class="account-order-actions">
+                            {% if not order.payment_method %}
+                            <a href="{% url 'customer:order_payment' order.pk %}" class="btn btn-sm btn-primary">
+                                Оплатить заказ
+                            </a>
+                            {% else %}
+                            <a href="{% url 'customer:order_complete' order.pk %}" class="btn btn-sm btn-outline">
+                                Открыть оформление
+                            </a>
+                            {% endif %}
+                            <a href="{% url 'customer:order_receipt_pdf' order.pk %}" target="_blank" class="btn btn-sm account-order-btn-pdf">
+                                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/></svg>
+                                Квитанция (PDF)
+                            </a>
+                            {% if order.status == 'ready' and not order.return_delivery_requested %}
+                            <button type="button" class="btn btn-sm btn-primary account-order-btn-delivery" data-order-id="{{ order.pk }}">
+                                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="1" y="3" width="15" height="13"/><polygon points="16 8 20 8 23 11 23 16 16 16 16 8"/><circle cx="5.5" cy="18.5" r="2.5"/><circle cx="18.5" cy="18.5" r="2.5"/></svg>
+                                Заказать доставку
+                            </button>
+                            {% elif order.return_delivery_requested %}
+                            <span class="account-order-delivery-badge">Доставка оформлена</span>
+                            {% endif %}
+                            {% if order.status == 'issued' %}
+                            {% if order.pk in order_ids_with_review %}
+                            <span class="account-order-review-badge">Вы оставили отзыв</span>
+                            {% else %}
+                            <a href="{% url 'customer:order_review' order.pk %}" class="btn btn-sm btn-outline account-order-btn-review">
+                                Оставить отзыв
+                            </a>
+                            {% endif %}
+                            {% endif %}
+                        </div>
+                    </div>
+                </div>
+                {% endfor %}
+            </div>
+            {% else %}
+            <div class="account-module">
+                <div class="account-module-body">
+                    <p class="account-empty">У вас пока нет заказов.</p>
+                    <a href="{% url 'customer:home' %}#services" class="btn btn-primary">Выбрать услуги</a>
+                </div>
+            </div>
+            {% endif %}
+            </div>
+        </section>
+
+        <section class="account-service-block">
+            <h2 class="account-section-title">Сервис и помощь</h2>
+            <div class="account-service-links">
+                <a href="#" id="chat-open-from-account" class="account-service-link">
+                    <span class="account-service-icon">
+                        <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>
+                    </span>
+                    Написать в поддержку
+                </a>
+                <a href="{% url 'customer:about' %}" class="account-service-link">
+                    <span class="account-service-icon">
+                        <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/><polyline points="10 9 9 9 8 9"/></svg>
+                    </span>
+                    Как мы устроены
+                </a>
+                <a href="{% url 'customer:home' %}#map-section" class="account-service-link">
+                    <span class="account-service-icon">
+                        <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"/><circle cx="12" cy="10" r="3"/></svg>
+                    </span>
+                    Контакты и адрес
+                </a>
+            </div>
+        </section>
+
+        {% if profile_form %}
+        <div class="account-edit-modal-backdrop" id="account-edit-modal" hidden>
+            <div class="account-edit-modal" role="dialog" aria-modal="true" aria-labelledby="account-edit-modal-title">
+                <button type="button" class="account-edit-modal-close" data-account-edit-close aria-label="Закрыть">
+                    ✕
+                </button>
+                <h2 class="account-edit-modal-title" id="account-edit-modal-title">Редактирование профиля</h2>
+                <p class="account-edit-modal-lead">Обновите ваши данные — они нужны для оформления заказов и связи.</p>
+                <form method="post" action="{% url 'customer:account' %}" class="account-profile-form" id="profile-form">
+                    {% csrf_token %}
+                    {% if profile_form.non_field_errors %}
+                    <ul class="form-errors">
+                        {% for err in profile_form.non_field_errors %}
+                        <li class="form-error">{{ err }}</li>
+                        {% endfor %}
+                    </ul>
+                    {% endif %}
+                    <div class="account-edit-fio">
+                        <h3 class="account-edit-block-title">ФИО</h3>
+                        <div class="form-row" data-fio-field="last_name">
+                            <label for="{{ profile_form.last_name.id_for_label }}">{{ profile_form.last_name.label }}</label>
+                            {{ profile_form.last_name }}
+                            {% if profile_form.last_name.errors %}
+                            <span class="form-error">{{ profile_form.last_name.errors.0 }}</span>
+                            {% endif %}
+                            <span class="form-error form-error-live" id="error-last_name" aria-live="polite"></span>
+                        </div>
+                        <div class="form-row" data-fio-field="first_name">
+                            <label for="{{ profile_form.first_name.id_for_label }}">{{ profile_form.first_name.label }}</label>
+                            {{ profile_form.first_name }}
+                            {% if profile_form.first_name.errors %}
+                            <span class="form-error">{{ profile_form.first_name.errors.0 }}</span>
+                            {% endif %}
+                            <span class="form-error form-error-live" id="error-first_name" aria-live="polite"></span>
+                        </div>
+                        <div class="form-row" data-fio-field="patronymic">
+                            <label for="{{ profile_form.patronymic.id_for_label }}">{{ profile_form.patronymic.label }}</label>
+                            {{ profile_form.patronymic }}
+                            {% if profile_form.patronymic.errors %}
+                            <span class="form-error">{{ profile_form.patronymic.errors.0 }}</span>
+                            {% endif %}
+                            <span class="form-error form-error-live" id="error-patronymic" aria-live="polite"></span>
+                        </div>
+                    </div>
+                    <div class="account-edit-contact">
+                        <h3 class="account-edit-block-title">Контакт</h3>
+                        <div class="form-row">
+                            <label for="{{ profile_form.email.id_for_label }}">{{ profile_form.email.label }}</label>
+                            {{ profile_form.email }}
+                            {% if profile_form.email.errors %}
+                            <span class="form-error">{{ profile_form.email.errors.0 }}</span>
+                            {% endif %}
+                        </div>
+                    </div>
+                    <div class="form-actions">
+                        <button type="submit" class="btn btn-primary">Сохранить</button>
+                        <button type="button" class="btn btn-outline" data-account-edit-close>Отмена</button>
+                    </div>
+                </form>
+            </div>
+        </div>
         {% endif %}
-    </section>
+    </main>
 </div>
+<script>
+(function() {
+    var chatOpen = document.getElementById('chat-open-from-account');
+    if (chatOpen) {
+        chatOpen.addEventListener('click', function(e) {
+            e.preventDefault();
+            var toggle = document.getElementById('chat-toggle');
+            if (toggle) toggle.click();
+        });
+    }
+
+    // Блок «История заказов» — выдвижной
+    var sectionToggle = document.getElementById('account-orders-toggle');
+    var sectionContent = document.getElementById('account-orders-content');
+    if (sectionToggle && sectionContent) {
+        sectionToggle.addEventListener('click', function() {
+            var open = sectionToggle.getAttribute('aria-expanded') === 'true';
+            sectionToggle.setAttribute('aria-expanded', !open);
+            sectionContent.classList.toggle('account-section-content-collapsed', open);
+        });
+    }
+
+    // Карточки заказов — выдвижные детали
+    document.querySelectorAll('.account-order-toggle').forEach(function(btn) {
+        btn.addEventListener('click', function() {
+            var id = btn.getAttribute('data-order-body');
+            var body = id ? document.getElementById(id) : null;
+            if (!body) return;
+            var open = btn.getAttribute('aria-expanded') === 'true';
+            btn.setAttribute('aria-expanded', !open);
+            body.hidden = open;
+        });
+    });
+
+    // Кнопка «Заказать доставку» для готовых заказов
+    document.querySelectorAll('.account-order-btn-delivery').forEach(function(btn) {
+        btn.addEventListener('click', function() {
+            var orderId = btn.dataset.orderId;
+            if (!orderId) return;
+            btn.disabled = true;
+            btn.textContent = 'Оформляем...';
+            fetch('{% url "customer:api_request_return_delivery" pk=0 %}'.replace('/0/', '/' + orderId + '/'), {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'X-CSRFToken': '{{ csrf_token }}',
+                },
+                body: '{}',
+            })
+            .then(function(r) { return r.json(); })
+            .then(function(data) {
+                if (data.ok) {
+                    btn.outerHTML = '<span class="account-order-delivery-badge">Доставка оформлена (' + data.delivery_cost + ' ₽)</span>';
+                } else {
+                    btn.disabled = false;
+                    btn.textContent = 'Заказать доставку';
+                    alert(data.error || 'Ошибка');
+                }
+            })
+            .catch(function() {
+                btn.disabled = false;
+                btn.textContent = 'Заказать доставку';
+                alert('Ошибка сети');
+            });
+        });
+    });
+
+    // Модалка редактирования профиля
+    var editModal = document.getElementById('account-edit-modal');
+    if (editModal) {
+        var openBtns = document.querySelectorAll('[data-account-edit-open]');
+        var closeBtns = editModal.querySelectorAll('[data-account-edit-close]');
+        var firstInput = editModal.querySelector('.account-profile-form .form-input');
+
+        function openModal() {
+            editModal.hidden = false;
+            editModal.classList.add('is-open');
+            if (firstInput) {
+                setTimeout(function() { firstInput.focus(); }, 0);
+            }
+        }
+
+        function closeModal() {
+            editModal.classList.remove('is-open');
+            editModal.hidden = true;
+        }
+
+        openBtns.forEach(function(btn) {
+            btn.addEventListener('click', function(e) {
+                e.preventDefault();
+                openModal();
+            });
+        });
+        closeBtns.forEach(function(btn) {
+            btn.addEventListener('click', function(e) {
+                e.preventDefault();
+                closeModal();
+            });
+        });
+        editModal.addEventListener('click', function(e) {
+            if (e.target === editModal) {
+                closeModal();
+            }
+        });
+        document.addEventListener('keydown', function(e) {
+            if (e.key === 'Escape' && editModal.classList.contains('is-open')) {
+                closeModal();
+            }
+        });
+
+        // Валидация ФИО без цифр (как на старой странице)
+        var form = document.getElementById('profile-form');
+        if (form) {
+            var fioNames = ['last_name', 'first_name', 'patronymic'];
+            var digitRe = /[0-9]/;
+
+            function showError(name, message) {
+                var el = document.getElementById('error-' + name);
+                if (el) {
+                    el.textContent = message || '';
+                    el.style.display = message ? 'block' : 'none';
+                }
+            }
+
+            function validateFio(name) {
+                var input = form.querySelector('[name=\"' + name + '\"]');
+                if (!input) return true;
+                var val = input.value;
+                if (!val.trim()) {
+                    showError(name, '');
+                    return true;
+                }
+                if (digitRe.test(val)) {
+                    showError(name, 'В поле не должно быть цифр.');
+                    return false;
+                }
+                showError(name, '');
+                return true;
+            }
+
+            fioNames.forEach(function(name) {
+                var input = form.querySelector('[name=\"' + name + '\"]');
+                if (!input) return;
+                input.addEventListener('input', function() {
+                    var before = this.value;
+                    var after = before.replace(/[0-9]/g, '');
+                    if (after !== before) {
+                        this.value = after;
+                        showError(name, 'В поле не должно быть цифр.');
+                    } else {
+                        showError(name, '');
+                    }
+                });
+                input.addEventListener('blur', function() {
+                    validateFio(name);
+                });
+            });
+
+            form.addEventListener('submit', function(e) {
+                var valid = true;
+                fioNames.forEach(function(name) {
+                    if (!validateFio(name)) valid = false;
+                });
+                if (!valid) {
+                    e.preventDefault();
+                    var firstErr = form.querySelector('.form-error-live[id^=\"error-\"]');
+                    if (firstErr && firstErr.textContent) {
+                        var fieldName = firstErr.id.replace('error-', '');
+                        var input = form.querySelector('[name=\"' + fieldName + '\"]');
+                        if (input) input.focus();
+                    }
+                }
+            });
+        }
+    }
+})();
+</script>
 {% endblock %}

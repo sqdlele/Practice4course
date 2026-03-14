@@ -4,33 +4,144 @@
 
 {% block content %}
 <div class="account-page account-edit-page">
-    <nav class="breadcrumbs">
+    {% if messages %}
+    <ul class="messages account-edit-messages">
+        {% for message in messages %}
+        <li class="message message-{{ message.tags }}">{{ message }}</li>
+        {% endfor %}
+    </ul>
+    {% endif %}
+
+    <nav class="breadcrumbs account-edit-breadcrumbs">
         <a href="{% url 'customer:home' %}">Главная</a>
         <span class="bc-sep">/</span>
         <a href="{% url 'customer:account' %}">Личный кабинет</a>
         <span class="bc-sep">/</span>
-        <span>Редактирование профиля</span>
+        <span class="breadcrumbs-current">Редактирование профиля</span>
     </nav>
 
-    <h1 class="account-title">Редактирование профиля</h1>
+    <h1 class="account-edit-title">Редактирование профиля</h1>
+    <p class="account-edit-lead">Измените ФИО и email — эти данные используются для заказов и связи.</p>
 
-    <section class="account-section">
-        <form method="post" class="account-profile-form">
+    <section class="account-edit-card">
+        <form method="post" class="account-profile-form" id="profile-form">
             {% csrf_token %}
-            {% for field in form %}
-            <div class="form-row">
-                <label for="{{ field.id_for_label }}">{{ field.label }}</label>
-                {{ field }}
-                {% if field.errors %}
-                <span class="form-error">{{ field.errors.0 }}</span>
-                {% endif %}
+            {% if form.non_field_errors %}
+            <ul class="form-errors">
+                {% for err in form.non_field_errors %}
+                <li class="form-error">{{ err }}</li>
+                {% endfor %}
+            </ul>
+            {% endif %}
+            <div class="account-edit-fio">
+                <h2 class="account-edit-block-title">ФИО</h2>
+                <div class="form-row" {% if form.last_name %}data-fio-field="last_name"{% endif %}>
+                    <label for="{{ form.last_name.id_for_label }}">{{ form.last_name.label }}</label>
+                    {{ form.last_name }}
+                    {% if form.last_name.errors %}
+                    <span class="form-error">{{ form.last_name.errors.0 }}</span>
+                    {% endif %}
+                    <span class="form-error form-error-live" id="error-last_name" aria-live="polite"></span>
+                </div>
+                <div class="form-row" {% if form.first_name %}data-fio-field="first_name"{% endif %}>
+                    <label for="{{ form.first_name.id_for_label }}">{{ form.first_name.label }}</label>
+                    {{ form.first_name }}
+                    {% if form.first_name.errors %}
+                    <span class="form-error">{{ form.first_name.errors.0 }}</span>
+                    {% endif %}
+                    <span class="form-error form-error-live" id="error-first_name" aria-live="polite"></span>
+                </div>
+                <div class="form-row" {% if form.patronymic %}data-fio-field="patronymic"{% endif %}>
+                    <label for="{{ form.patronymic.id_for_label }}">{{ form.patronymic.label }}</label>
+                    {{ form.patronymic }}
+                    {% if form.patronymic.errors %}
+                    <span class="form-error">{{ form.patronymic.errors.0 }}</span>
+                    {% endif %}
+                    <span class="form-error form-error-live" id="error-patronymic" aria-live="polite"></span>
+                </div>
             </div>
-            {% endfor %}
+            <div class="account-edit-contact">
+                <h2 class="account-edit-block-title">Контакт</h2>
+                <div class="form-row">
+                    <label for="{{ form.email.id_for_label }}">{{ form.email.label }}</label>
+                    {{ form.email }}
+                    {% if form.email.errors %}
+                    <span class="form-error">{{ form.email.errors.0 }}</span>
+                    {% endif %}
+                </div>
+            </div>
             <div class="form-actions">
                 <button type="submit" class="btn btn-primary">Сохранить</button>
-                <a href="{% url 'customer:account' %}" class="btn btn-ghost">Отмена</a>
+                <a href="{% url 'customer:account' %}" class="btn btn-outline">Отмена</a>
             </div>
         </form>
     </section>
 </div>
+
+<script>
+(function() {
+    var form = document.getElementById('profile-form');
+    if (!form) return;
+    var fioNames = ['last_name', 'first_name', 'patronymic'];
+    var digitRe = /[0-9]/g;
+
+    function showError(name, message) {
+        var el = document.getElementById('error-' + name);
+        if (el) {
+            el.textContent = message || '';
+            el.style.display = message ? 'block' : 'none';
+        }
+    }
+
+    function validateFio(name) {
+        var input = form.querySelector('[name="' + name + '"]');
+        if (!input) return true;
+        var val = input.value;
+        if (!val.trim()) {
+            showError(name, '');
+            return true;
+        }
+        if (digitRe.test(val)) {
+            showError(name, 'В поле не должно быть цифр.');
+            return false;
+        }
+        showError(name, '');
+        return true;
+    }
+
+    fioNames.forEach(function(name) {
+        var input = form.querySelector('[name="' + name + '"]');
+        if (!input) return;
+        input.addEventListener('input', function() {
+            var before = this.value;
+            var after = before.replace(digitRe, '');
+            if (after !== before) {
+                this.value = after;
+                showError(name, 'В поле не должно быть цифр.');
+            } else {
+                showError(name, '');
+            }
+        });
+        input.addEventListener('blur', function() {
+            validateFio(name);
+        });
+    });
+
+    form.addEventListener('submit', function(e) {
+        var valid = true;
+        fioNames.forEach(function(name) {
+            if (!validateFio(name)) valid = false;
+        });
+        if (!valid) {
+            e.preventDefault();
+            var firstErr = form.querySelector('.form-error-live[id^="error-"]');
+            if (firstErr && firstErr.textContent) {
+                var fieldName = firstErr.id.replace('error-', '');
+                var input = form.querySelector('[name="' + fieldName + '"]');
+                if (input) input.focus();
+            }
+        }
+    });
+})();
+</script>
 {% endblock %}

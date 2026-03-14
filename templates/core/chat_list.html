@@ -9,7 +9,7 @@
         <div class="chat-list">
             {% for item in rooms %}
             <a href="{% url 'core:staff_chat' item.room.pk %}" class="chat-list-item {% if item.unread %}chat-list-unread{% endif %}">
-                <div class="chat-list-name">{{ item.room.user.get_full_name|default:item.room.user.username }}</div>
+                <div class="chat-list-name">{{ item.room.user.get_full_name|default:item.room.user.phone }}</div>
                 <div class="chat-list-preview">
                     {% if item.last_msg %}{{ item.last_msg.text|truncatechars:60 }}{% else %}Нет сообщений{% endif %}
                 </div>

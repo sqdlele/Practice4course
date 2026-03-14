@@ -1,0 +1,60 @@
+{% extends 'admin/base.html' %}
+{% load i18n unfold %}
+
+{% block title %}{% if subtitle %}{{ subtitle }} | {% endif %}{{ title }} | {{ site_title|default:_('Django site admin') }}{% endblock %}
+
+{% block branding %}
+    {% include "unfold/helpers/site_branding.html" %}
+{% endblock %}
+
+{% block content %}
+    <div class="flex flex-col gap-6">
+        {% if new_users_today is not None %}
+            <div class="flex flex-wrap gap-4">
+                {% component "unfold/components/card.html" with title="Новых клиентов сегодня" class="min-w-0 shrink-0" %}
+                    <div class="font-semibold text-2xl text-primary-600 tracking-tight" id="admin-new-users-counter" data-target="{{ new_users_today }}">0</div>
+                    <p class="text-base-500 text-sm mt-1">зарегистрировались за сегодня</p>
+                {% endcomponent %}
+            </div>
+            <script>
+            (function(){
+                var el = document.getElementById('admin-new-users-counter');
+                if (!el) return;
+                var target = parseInt(el.getAttribute('data-target'), 10) || 0;
+                var duration = 1500;
+                if (target <= 0) { el.textContent = '0'; return; }
+                var step = Math.max(1, Math.floor(target / 50));
+                var current = 0;
+                var interval = duration / (target / step);
+                var timer = setInterval(function() {
+                    current += step;
+                    if (current >= target) { current = target; clearInterval(timer); }
+                    el.textContent = current.toLocaleString('ru-RU');
+                }, interval);
+            })();
+            </script>
+        {% endif %}
+
+        {% if orders_period_filters %}
+            <div class="flex flex-col gap-4">
+                {% component "unfold/components/card.html" with title="Заказы по периодам" %}
+                    <div class="mb-4">
+                        {% component "unfold/components/navigation.html" with items=orders_period_filters %}
+                        {% endcomponent %}
+                    </div>
+                    {% if orders_chart_data %}
+                        {% component "unfold/components/chart/bar.html" with data=orders_chart_data height=320 %}
+                        {% endcomponent %}
+                    {% endif %}
+                {% endcomponent %}
+            </div>
+        {% endif %}
+
+        <div class="flex flex-col lg:flex-row lg:gap-8">
+            <div class="grow">
+                {% include "unfold/helpers/app_list_default.html" %}
+            </div>
+            {% include "unfold/helpers/history.html" %}
+        </div>
+    </div>
+{% endblock %}

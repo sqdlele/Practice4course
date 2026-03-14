@@ -12,8 +12,8 @@
             <img src="{{ banner.image.url }}" alt="{{ banner.title }}">
             {% if banner.title %}
             <div class="slide-overlay">
-                <h2>{{ banner.title }}</h2>
-                {% if banner.subtitle %}<p>{{ banner.subtitle }}</p>{% endif %}
+                <!-- <h2>{{ banner.title }}</h2>
+                {% if banner.subtitle %}<p>{{ banner.subtitle }}</p>{% endif %} -->
             </div>
             {% endif %}
         </div>
@@ -24,7 +24,7 @@
     <button class="slider-btn slider-next" id="slider-next">&rsaquo;</button>
     <div class="slider-dots" id="slider-dots">
         {% for banner in banners %}
-        <span class="dot {% if forloop.first %}active{% endif %}" data-idx="{{ forloop.counter0 }}"></span>
+        <!-- <span class="dot {% if forloop.first %}active{% endif %}" data-idx="{{ forloop.counter0 }}"></span> -->
         {% endfor %}
     </div>
     {% endif %}
@@ -36,51 +36,69 @@
 </section>
 {% endif %}
 
-{% if not user.is_authenticated %}
-<div class="guest-cta">
-    <a href="{% url 'customer:login' %}" class="btn btn-primary btn-lg">Войти</a>
-    <a href="{% url 'customer:register' %}" class="btn btn-ghost btn-lg">Регистрация</a>
-</div>
-{% endif %}
+<p class="home-intro">Закажите химчистку онлайн: выберите услуги, оформите заказ — мы заберём вещи и вернём их чистыми и аккуратными. Работаем с одеждой, домашним текстилем и изделиями из кожи.</p>
 
 <!-- Популярные услуги -->
 <section class="section" id="services">
     <h2 class="section-title">Популярные услуги</h2>
+    <p class="section-desc">Добавьте нужные позиции в корзину и перейдите к оформлению — укажите количество и при необходимости размеры или вес.</p>
     <div class="svc-list">
         {% for service in services %}
-        <div class="svc-card" data-id="{{ service.pk }}" data-price="{{ service.price }}" data-unit="{{ service.price_unit }}" data-dims="{{ service.has_dimensions|yesno:'1,0' }}" data-name="{{ service.name }}">
+        <div class="svc-card" 
+             data-id="{{ service.pk }}" 
+             data-price="{{ service.price }}" 
+             data-unit="{{ service.price_unit }}" 
+             data-dims="{{ service.has_dimensions|yesno:'1,0' }}"
+             data-has-weight="{{ service.has_weight|yesno:'1,0' }}"
+             data-name="{{ service.name }}">
+            
             <div class="svc-card-top">
+                {# Блок иконки/фото отображается только если есть контент #}
+                {% if service.image or service.svg_code %}
                 <div class="svc-thumb">
                     {% if service.image %}
-                    <img src="{{ service.image.url }}" alt="{{ service.name }}">
-                    {% else %}
-                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm-1 17.93c-3.95-.49-7-3.85-7-7.93 0-.62.08-1.21.21-1.79L9 15v1c0 1.1.9 2 2 2v1.93zm6.9-2.54c-.26-.81-1-1.39-1.9-1.39h-1v-3c0-.55-.45-1-1-1H8v-2h2c.55 0 1-.45 1-1V7h2c1.1 0 2-.9 2-2v-.41c2.93 1.19 5 4.06 5 7.41 0 2.08-.8 3.97-2.1 5.39z"/></svg>
+                        <img src="{{ service.image.url }}" alt="{{ service.name }}">
+                    {% elif service.svg_code %}
+                        {{ service.svg_code|safe }}
                     {% endif %}
                 </div>
+                {% endif %}
+
                 <div class="svc-info">
                     <h3 class="svc-name">{{ service.name }}</h3>
                     <span class="svc-time">Срок чистки — {{ service.cleaning_time }}</span>
                 </div>
             </div>
+
             <div class="svc-card-bottom">
                 <span class="svc-price">{{ service.price_label }}</span>
                 <div class="svc-qty">
-                    <button type="button" class="svc-qty-btn svc-qty-minus" aria-label="Минус">&minus;</button>
+                    <button type="button" class="svc-qty-btn svc-qty-minus" aria-label="Уменьшить">&minus;</button>
                     <span class="svc-qty-val">0</span>
-                    <button type="button" class="svc-qty-btn svc-qty-plus" aria-label="Плюс">+</button>
+                    <button type="button" class="svc-qty-btn svc-qty-plus" aria-label="Добавить">+</button>
                 </div>
             </div>
+
             {% if service.has_dimensions %}
             <div class="svc-dims" style="display:none">
                 <div class="svc-dim-row">
-                    <label>Длина, м:&nbsp;<input type="number" class="svc-dim-input svc-length" value="0" min="0" max="15" step="0.1"></label>
+                    <label>Длина, м: <input type="number" class="svc-dim-input svc-length" value="0" min="0" max="15" step="0.1"></label>
                     <input type="range" class="svc-dim-range svc-length-range" min="0" max="15" step="0.1" value="0">
                 </div>
                 <div class="svc-dim-row">
-                    <label>Ширина, м:&nbsp;<input type="number" class="svc-dim-input svc-width" value="0" min="0" max="15" step="0.1"></label>
+                    <label>Ширина, м: <input type="number" class="svc-dim-input svc-width" value="0" min="0" max="15" step="0.1"></label>
                     <input type="range" class="svc-dim-range svc-width-range" min="0" max="15" step="0.1" value="0">
                 </div>
                 <div class="svc-dims-total">Итого: <strong class="svc-dims-sum">0 ₽</strong></div>
+            </div>
+            {% endif %}
+            {% if service.has_weight %}
+            <div class="svc-weight-panel" style="display:none">
+                <div class="svc-dim-row">
+                    <label>Вес, кг: <input type="number" class="svc-dim-input svc-weight-input" value="0" min="0" max="50" step="0.1"></label>
+                    <input type="range" class="svc-dim-range svc-weight-range" min="0" max="50" step="0.1" value="0">
+                </div>
+                <div class="svc-dims-total">Итого: <strong class="svc-weight-sum">0 ₽</strong></div>
             </div>
             {% endif %}
         </div>
@@ -94,10 +112,11 @@
 {% if categories %}
 <section class="section" id="categories">
     <h2 class="section-title">Наши услуги</h2>
+    <p class="section-desc">Полный перечень услуг по категориям с ценами и сроками. Выберите категорию, чтобы увидеть все варианты.</p>
     <div class="home-cats">
         {% for cat in categories %}
         <div class="home-cat-block">
-            <a href="{% url 'customer:category' cat.slug %}" class="home-cat-top">
+            <a href="{% url 'customer:catalog' %}?cat={{ cat.slug }}" class="home-cat-top">
                 <h3>{{ cat.name }}</h3>
             </a>
             <div class="home-cat-body">
@@ -121,61 +140,79 @@
 <!-- Яндекс Карта — на всю ширину -->
 <section class="map-fullwidth" id="map-section">
     <h2 class="section-title">Где нас найти</h2>
+    <p class="section-desc">Мы находимся в Ижевске. Точный адрес и часы работы можно уточнить по телефону или в разделе контактов.</p>
     <script src="https://api-maps.yandex.ru/2.1/?lang=ru_RU" type="text/javascript"></script>
     <div id="yandex-map" style="width:100%;height:420px;"></div>
     <script>
-        ymaps.ready(function(){
-            var map = new ymaps.Map('yandex-map', {
-                center: [56.834926, 53.234687],
-                zoom: 15,
-                controls: ['zoomControl']
-            });
-            map.geoObjects.add(new ymaps.Placemark([56.834926, 53.234687], {
-                balloonContent: 'Чисто.Тут — мы здесь!'
-            }, {
-                preset: 'islands#blueCleaningIcon'
-            }));
-        });
+ymaps.ready(function(){
+    var map = new ymaps.Map('yandex-map', {
+        center: [56.835609, 53.233697],
+        zoom: 15,
+        controls: ['zoomControl'],
+        behaviors: ['drag', 'dblClickZoom', 'multiTouch']
+    });
+    
+    map.container.fitToViewport(); 
+
+    map.geoObjects.add(new ymaps.Placemark([56.835609, 53.233697], {
+        balloonContent: 'Чисто.Тут — мы здесь!'
+    }, {
+        preset: 'islands#blueCleaningIcon'
+    }));
+});
     </script>
 </section>
 
 <!-- Отзывы -->
 {% if reviews %}
-<section class="section" id="reviews-section">
+<section class="section reviews-section" id="reviews-section">
     <h2 class="section-title">Отзывы наших клиентов</h2>
+    <p class="section-desc">Что говорят те, кто уже пользовался нашими услугами.</p>
     <div class="reviews-carousel" id="reviews-carousel">
         <div class="reviews-track" id="reviews-track">
             {% for review in reviews %}
             <div class="review-card">
-                <div class="review-rating">
-                    {% for i in "12345" %}
-                        {% if forloop.counter <= review.rating %}
-                            <span class="star filled">★</span>
-                        {% else %}
-                            <span class="star">★</span>
-                        {% endif %}
-                    {% endfor %}
+                <div class="review-card-inner">
+                    <div class="review-rating" aria-label="Оценка: {{ review.rating }} из 5">
+                        {% for i in "12345" %}
+                            {% if forloop.counter <= review.rating %}
+                                <span class="star filled">★</span>
+                            {% else %}
+                                <span class="star">★</span>
+                            {% endif %}
+                        {% endfor %}
+                    </div>
+                    <blockquote class="review-text">{{ review.text }}</blockquote>
+                    <footer class="review-footer">
+                        <span class="review-avatar" aria-hidden="true">{{ review.author_name|slice:":1" }}</span>
+                        <div class="review-meta">
+                            <span class="review-author">{{ review.author_name }}</span>
+                            <time class="review-date" datetime="{{ review.created_at|date:'c' }}">{{ review.created_at|date:'j E Y' }}</time>
+                        </div>
+                    </footer>
                 </div>
-                <p class="review-text">{{ review.text }}</p>
-                <span class="review-author">{{ review.author_name }}</span>
             </div>
             {% endfor %}
         </div>
-        <button class="slider-btn reviews-prev" id="reviews-prev">&lsaquo;</button>
-        <button class="slider-btn reviews-next" id="reviews-next">&rsaquo;</button>
+        <button type="button" class="slider-btn reviews-prev" id="reviews-prev" aria-label="Предыдущий отзыв">&lsaquo;</button>
+        <button type="button" class="slider-btn reviews-next" id="reviews-next" aria-label="Следующий отзыв">&rsaquo;</button>
     </div>
 </section>
 {% endif %}
 
 <script>
-/* Карточки услуг: количество + размеры + корзина */
+
+    
+// Карточки услуг количествоб, размеры, корзина 
 (function(){
     document.querySelectorAll('.svc-card').forEach(function(card){
         var id = parseInt(card.dataset.id);
         var price = parseFloat(card.dataset.price);
         var hasDims = card.dataset.dims === '1';
+        var hasWeight = card.dataset.hasWeight === '1';
         var valEl = card.querySelector('.svc-qty-val');
         var dimsPanel = card.querySelector('.svc-dims');
+        var weightPanel = card.querySelector('.svc-weight-panel');
 
         function getQty() { return parseInt(valEl.textContent) || 0; }
 
@@ -187,6 +224,9 @@
                 item.length = parseFloat(dimsPanel.querySelector('.svc-length').value) || 0;
                 item.width = parseFloat(dimsPanel.querySelector('.svc-width').value) || 0;
             }
+            if (hasWeight && weightPanel) {
+                item.weight = parseFloat(weightPanel.querySelector('.svc-weight-input').value) || 0;
+            }
             Cart.set(item);
         }
 
@@ -196,6 +236,10 @@
             if (hasDims && dimsPanel) {
                 dimsPanel.style.display = qty > 0 ? '' : 'none';
                 calcDimsTotal();
+            }
+            if (hasWeight && weightPanel) {
+                weightPanel.style.display = qty > 0 ? '' : 'none';
+                calcWeightTotal();
             }
             syncToCart();
         }
@@ -226,12 +270,40 @@
             syncPair(widInput, widRange);
         }
 
+        if (hasWeight && weightPanel) {
+            var wInput = weightPanel.querySelector('.svc-weight-input');
+            var wRange = weightPanel.querySelector('.svc-weight-range');
+            var wSumEl = weightPanel.querySelector('.svc-weight-sum');
+
+            function calcWeightTotal() {
+                var w = parseFloat(wInput.value) || 0;
+                var qty = getQty();
+                var total = Math.round(price * w * qty);
+                wSumEl.textContent = total.toLocaleString('ru-RU') + ' ₽';
+            }
+
+            wInput.addEventListener('input', function(){ wRange.value = wInput.value; calcWeightTotal(); syncToCart(); });
+            wRange.addEventListener('input', function(){ wInput.value = wRange.value; calcWeightTotal(); syncToCart(); });
+        }
+
         var existing = Cart.get(id);
-        if (existing) updateQty(existing.qty);
+        if (existing) {
+            if (hasDims && dimsPanel && existing.length) {
+                dimsPanel.querySelector('.svc-length').value = existing.length;
+                dimsPanel.querySelector('.svc-length-range').value = existing.length;
+                dimsPanel.querySelector('.svc-width').value = existing.width || 0;
+                dimsPanel.querySelector('.svc-width-range').value = existing.width || 0;
+            }
+            if (hasWeight && weightPanel && existing.weight) {
+                weightPanel.querySelector('.svc-weight-input').value = existing.weight;
+                weightPanel.querySelector('.svc-weight-range').value = existing.weight;
+            }
+            updateQty(existing.qty);
+        }
     });
 })();
 
-/* Баннер-слайдер */
+//  слайдер
 (function(){
     const track = document.getElementById('slider-track');
     if (!track) return;
@@ -249,10 +321,10 @@
     prev.addEventListener('click', () => go(idx - 1));
     next.addEventListener('click', () => go(idx + 1));
     dots.forEach(d => d.addEventListener('click', () => go(+d.dataset.idx)));
-    setInterval(() => go(idx + 1), 5000);
+    setInterval(() => go(idx + 1), 15000);
 })();
 
-/* Отзывы — горизонтальная прокрутка */
+//  Отзывы  
 (function(){
     const track = document.getElementById('reviews-track');
     if (!track) return;

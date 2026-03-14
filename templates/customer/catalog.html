@@ -3,30 +3,183 @@
 {% block title %}Услуги — Чисто.Тут{% endblock %}
 
 {% block content %}
-<section class="catalog-hero">
-    <h1>Наши услуги</h1>
-    <p class="catalog-hero-sub">Выберите категорию, чтобы увидеть полный список услуг и цены</p>
-</section>
+<nav class="breadcrumbs">
+    <a href="{% url 'customer:home' %}">Главная</a>
+    <span class="bc-sep">/</span>
+    <span>Услуги</span>
+</nav>
 
-<section class="catalog-cats">
-    {% for cat in categories %}
-    <div class="cat-block">
-        <div class="cat-block-header">
-            {% if cat.image %}
-            <div class="cat-block-img">
-                <img src="{{ cat.image.url }}" alt="{{ cat.name }}">
-            </div>
-            {% endif %}
-            <h2><a href="{% url 'customer:category' cat.slug %}">{{ cat.name }}</a></h2>
+<h1 class="cl-title">Все услуги</h1>
+
+<div class="cl-layout">
+    <!-- Левая часть: поиск + табы + список -->
+    <div class="cl-main">
+
+        <!-- Поиск -->
+        <div class="cl-search-wrap">
+            <svg class="cl-search-icon" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.35-4.35"/></svg>
+            <input type="text" id="cl-search" class="cl-search-input" placeholder="Поиск услуги…" autocomplete="off">
+            <button id="cl-search-clear" class="cl-search-clear" style="display:none" title="Очистить">✕</button>
         </div>
-        <div class="cat-tags">
-            {% for svc in cat.services.all %}
-            <a href="{% url 'customer:category' cat.slug %}" class="cat-tag">{{ svc.name }}</a>
+
+        <!-- Табы категорий -->
+        <div class="cl-tabs" id="cl-tabs">
+            <button class="cl-tab active" data-cat="all">Все</button>
+            {% for cat in categories %}
+            <button class="cl-tab" data-cat="{{ cat.pk }}">{{ cat.name }}</button>
             {% endfor %}
         </div>
+
+        <!-- Таблица услуг -->
+        <div class="cl-table" id="cl-table">
+            <div class="cl-table-head">
+                <span class="cl-col-name">Услуга</span>
+                <span class="cl-col-price">Цена</span>
+                <span class="cl-col-action"></span>
+            </div>
+            <div id="cl-rows">
+            {% for svc in all_services %}
+            <div class="cl-row" data-cat="{{ svc.cat_id }}" data-search="{{ svc.name|lower }}">
+                <span class="cl-col-name">
+                    {% if svc.parent_name %}
+                    <span class="cl-row-parent">{{ svc.parent_name }}</span>
+                    <span class="cl-row-child">{{ svc.short_name }}</span>
+                    {% else %}
+                    {{ svc.name }}
+                    {% endif %}
+                </span>
+                <span class="cl-col-price">{{ svc.price_label }}</span>
+                <button type="button" class="btn btn-primary cl-add-btn" data-id="{{ svc.id }}">Добавить</button>
+            </div>
+            {% empty %}
+            <p class="cl-empty">Услуги пока не добавлены.</p>
+            {% endfor %}
+            </div>
+            <p class="cl-no-results" id="cl-no-results" style="display:none">Ничего не найдено.</p>
+        </div>
+
     </div>
-    {% empty %}
-    <p class="empty">Категории скоро появятся.</p>
-    {% endfor %}
-</section>
+
+    <!-- Сайдбар: калькулятор -->
+    <aside class="cl-sidebar">
+        <div class="cl-calc">
+            <h3 class="cl-calc-title">Предварительный расчёт стоимости услуг</h3>
+            <div class="cl-calc-total">
+                <span class="cl-calc-label">Итого:</span>
+                <span class="cl-calc-sum" id="cl-total">0 ₽</span>
+            </div>
+            <div class="cl-calc-items" id="cl-calc-items"></div>
+            <a href="{% url 'customer:cart' %}" class="btn btn-primary cl-calc-cart-btn" id="cl-go-cart" style="display:none">Перейти в корзину</a>
+        </div>
+    </aside>
+</div>
+
+<script>
+(function(){
+    var searchInput = document.getElementById('cl-search');
+    var searchClear = document.getElementById('cl-search-clear');
+    var tabs = document.querySelectorAll('.cl-tab');
+    var rows = document.querySelectorAll('.cl-row');
+    var noResults = document.getElementById('cl-no-results');
+    var totalEl = document.getElementById('cl-total');
+    var calcItems = document.getElementById('cl-calc-items');
+    var goCartBtn = document.getElementById('cl-go-cart');
+    var activeCat = '{% if initial_cat_pk %}{{ initial_cat_pk }}{% else %}all{% endif %}';
+    var servicesCache = null;
+
+    function applyFilters() {
+        var query = searchInput.value.trim().toLowerCase();
+        searchClear.style.display = query ? '' : 'none';
+        var visible = 0;
+        rows.forEach(function(row){
+            var matchCat = activeCat === 'all' || row.dataset.cat === activeCat;
+            var matchSearch = !query || row.dataset.search.indexOf(query) !== -1;
+            var show = matchCat && matchSearch;
+            row.style.display = show ? '' : 'none';
+            if (show) visible++;
+        });
+        noResults.style.display = visible === 0 ? '' : 'none';
+    }
+
+    tabs.forEach(function(tab){
+        tab.addEventListener('click', function(){
+            tabs.forEach(function(t){ t.classList.remove('active'); });
+            tab.classList.add('active');
+            activeCat = tab.dataset.cat;
+            applyFilters();
+        });
+    });
+
+    {% if initial_cat_pk %}
+    tabs.forEach(function(t){
+        t.classList.remove('active');
+        if (t.dataset.cat === '{{ initial_cat_pk }}') t.classList.add('active');
+    });
+    {% endif %}
+    applyFilters();
+
+    searchInput.addEventListener('input', applyFilters);
+    searchClear.addEventListener('click', function(){
+        searchInput.value = '';
+        applyFilters();
+        searchInput.focus();
+    });
+
+    // Калькулятор
+    function fetchServices() {
+        if (servicesCache) return Promise.resolve();
+        return fetch('{% url "customer:api_services" %}')
+            .then(function(r){ return r.json(); })
+            .then(function(d){
+                servicesCache = {};
+                d.services.forEach(function(s){ servicesCache[s.id] = s; });
+            });
+    }
+
+    function updateCalc() {
+        if (!servicesCache) { return fetchServices().then(updateCalc); }
+        var items = Cart.getAll();
+        var sum = 0, html = '', hasAny = false;
+        items.forEach(function(ci){
+            var svc = servicesCache[ci.service_id];
+            if (!svc) return;
+            hasAny = true;
+            var price = parseFloat(svc.price);
+            var qty = ci.qty || 1;
+            var lineTotal = price * qty;
+            if (ci.length && ci.width) lineTotal = price * ci.length * ci.width * qty;
+            if (ci.weight) lineTotal = price * ci.weight * qty;
+            sum += lineTotal;
+            html += '<div class="cl-calc-line"><span>' + svc.name + ' × ' + qty + '</span><span>' + Math.round(lineTotal).toLocaleString('ru-RU') + ' ₽</span></div>';
+        });
+        totalEl.textContent = Math.round(sum).toLocaleString('ru-RU') + ' ₽';
+        calcItems.innerHTML = html;
+        goCartBtn.style.display = hasAny ? '' : 'none';
+
+        document.querySelectorAll('.cl-add-btn').forEach(function(btn){
+            var id = parseInt(btn.dataset.id);
+            var ci = Cart.get(id);
+            if (ci && ci.qty > 0) {
+                btn.textContent = 'В корзине (' + ci.qty + ')';
+                btn.classList.add('cl-btn-in-cart');
+            } else {
+                btn.textContent = 'Добавить';
+                btn.classList.remove('cl-btn-in-cart');
+            }
+        });
+    }
+
+    document.querySelectorAll('.cl-add-btn').forEach(function(btn){
+        btn.addEventListener('click', function(){
+            var id = parseInt(btn.dataset.id);
+            var existing = Cart.get(id);
+            if (existing) { existing.qty++; Cart.set(existing); }
+            else { Cart.set({ service_id: id, qty: 1 }); }
+            updateCalc();
+        });
+    });
+
+    fetchServices().then(updateCalc);
+})();
+</script>
 {% endblock %}

@@ -1,57 +1,103 @@
 from django.contrib import admin
 from django.contrib.auth.admin import UserAdmin as BaseUserAdmin
 from django.contrib.auth import get_user_model
+from unfold.admin import ModelAdmin, TabularInline
 
-from .models import Client, Order, Service, ServiceCategory, OrderItem, HeroBanner, Review
+from .models import Client, Order, Service, ServiceCategory, OrderItem, HeroBanner, Review, AboutPage, AboutFeature, AboutStep, DeliveryOption
 
 User = get_user_model()
 
 
 @admin.register(ServiceCategory)
-class ServiceCategoryAdmin(admin.ModelAdmin):
+class ServiceCategoryAdmin(ModelAdmin):
     list_display = ('name', 'slug', 'order')
     list_editable = ('order',)
     prepopulated_fields = {'slug': ('name',)}
 
 
 @admin.register(Service)
-class ServiceAdmin(admin.ModelAdmin):
-    list_display = ('name', 'parent', 'category', 'price', 'price_unit', 'cleaning_time', 'is_popular')
+class ServiceAdmin(ModelAdmin):
+    list_display = ('name', 'parent', 'category', 'price', 'price_unit', 'cleaning_time', 'is_popular','svg_code')
     list_editable = ('price', 'price_unit', 'cleaning_time', 'is_popular')
     list_filter = ('category', 'parent', 'price_unit', 'has_dimensions', 'has_weight', 'is_popular')
     raw_id_fields = ('parent',)
+    
+    fieldsets = (
+        (None, {
+            'fields': ('name', 'parent', 'category', 'price', 'price_unit', 'cleaning_time', 'is_popular')
+        }),
+        ('Визуал (Фото или SVG)', {
+            'fields': ('image', 'svg_code'),
+            'description': 'Если загружено фото, оно будет в приоритете. Если нет — выведется SVG.'
+        }),
+        ('Дополнительные параметры', {
+            'fields': ('has_dimensions', 'has_weight'),
+        }),
+    )
+
+    @admin.display(boolean=True, description='SVG')
+    def has_svg(self, obj):
+        return bool(obj.svg_code)
 
 
 @admin.register(HeroBanner)
-class HeroBannerAdmin(admin.ModelAdmin):
+class HeroBannerAdmin(ModelAdmin):
     list_display = ('title', 'order')
     list_editable = ('order',)
 
 
 @admin.register(Review)
-class ReviewAdmin(admin.ModelAdmin):
-    list_display = ('author_name', 'rating', 'created_at')
+class ReviewAdmin(ModelAdmin):
+    list_display = ('author_name', 'rating', 'order', 'created_at')
+    list_filter = ('rating',)
+
+
+@admin.register(AboutPage)
+class AboutPageAdmin(ModelAdmin):
+    list_display = ('hero_title', 'years_experience')
+
+
+@admin.register(AboutFeature)
+class AboutFeatureAdmin(ModelAdmin):
+    list_display = ('title', 'order')
+    list_editable = ('order',)
+
+
+@admin.register(AboutStep)
+class AboutStepAdmin(ModelAdmin):
+    list_display = ('step_number', 'title', 'order')
+    list_editable = ('order',)
 
 
 @admin.register(Client)
-class ClientAdmin(admin.ModelAdmin):
+class ClientAdmin(ModelAdmin):
     list_display = ('name', 'phone')
     search_fields = ('name', 'phone')
 
 
-class OrderItemInline(admin.TabularInline):
+class OrderItemInline(TabularInline):
     model = OrderItem
     extra = 0
     fields = ('service', 'unit_price', 'quantity', 'complexity', 'width', 'length', 'weight')
 
 
 @admin.register(Order)
-class OrderAdmin(admin.ModelAdmin):
-    list_display = ('id', 'client', 'status', 'discount_percent', 'ready_by', 'created_at')
-    list_filter = ('status',)
+class OrderAdmin(ModelAdmin):
+    list_display = (
+        'id', 'client', 'source', 'status', 'pickup_method', 'pickup_cost',
+        'payment_method', 'prepayment_amount', 'discount_percent',
+        'delivery_option', 'delivery_cost', 'ready_by', 'created_at',
+    )
+    list_filter = ('status', 'source', 'pickup_method')
     search_fields = ('client__name', 'client__phone')
     date_hierarchy = 'ready_by'
     inlines = [OrderItemInline]
+
+
+@admin.register(DeliveryOption)
+class DeliveryOptionAdmin(ModelAdmin):
+    list_display = ('name', 'slug', 'base_price', 'free_if_order_total_above', 'free_kg', 'extra_per_kg', 'order')
+    list_editable = ('base_price', 'free_if_order_total_above', 'free_kg', 'extra_per_kg', 'order')
 
 
 @admin.action(description='Подтвердить (разрешить вход)')
@@ -60,7 +106,7 @@ def approve_users(modeladmin, request, queryset):
 
 
 @admin.register(User)
-class CustomUserAdmin(BaseUserAdmin):
+class CustomUserAdmin(ModelAdmin, BaseUserAdmin):
     list_display = ('phone', 'last_name', 'first_name', 'patronymic', 'is_staff', 'is_active', 'date_joined')
     list_filter = ('is_active', 'is_staff', 'is_superuser')
     search_fields = ('phone', 'first_name', 'last_name', 'patronymic')

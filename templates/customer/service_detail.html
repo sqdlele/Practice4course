@@ -6,6 +6,8 @@
 <nav class="breadcrumbs">
     <a href="{% url 'customer:home' %}">Главная</a>
     <span class="bc-sep">/</span>
+    <a href="{% url 'customer:catalog' %}">Услуги</a>
+    <span class="bc-sep">/</span>
     <a href="{% url 'customer:category' category.slug %}">{{ category.name }}</a>
     <span class="bc-sep">/</span>
     <span>{{ service.name }}</span>
@@ -25,7 +27,11 @@
             </div>
             {% for item in children %}
             <div class="sd-table-row" data-id="{{ item.pk }}" data-price="{{ item.price }}" data-name="{{ item.name }}">
-                <span class="sd-col-name">{{ item.name }}</span>
+                <span class="sd-col-name">
+                    {{ item.name }}
+                    {% if item.has_weight %}<small class="sd-note">* укажите вес в корзине</small>{% endif %}
+                    {% if item.has_dimensions %}<small class="sd-note">* укажите размеры в корзине</small>{% endif %}
+                </span>
                 <span class="sd-col-price">{{ item.price_label }}</span>
                 <button type="button" class="btn btn-primary sd-add-btn" data-id="{{ item.pk }}">Добавить</button>
             </div>
@@ -40,7 +46,11 @@
                 <span class="sd-col-action"></span>
             </div>
             <div class="sd-table-row" data-id="{{ service.pk }}" data-price="{{ service.price }}" data-name="{{ service.name }}">
-                <span class="sd-col-name">{{ service.name }}</span>
+                <span class="sd-col-name">
+                    {{ service.name }}
+                    {% if service.has_weight %}<small class="sd-note">* укажите вес в корзине</small>{% endif %}
+                    {% if service.has_dimensions %}<small class="sd-note">* укажите размеры в корзине</small>{% endif %}
+                </span>
                 <span class="sd-col-price">{{ service.price_label }}</span>
                 <button type="button" class="btn btn-primary sd-add-btn" data-id="{{ service.pk }}">Добавить</button>
             </div>
@@ -67,24 +77,42 @@
     var totalEl = document.getElementById('sd-total');
     var calcItems = document.getElementById('sd-calc-items');
     var goCartBtn = document.getElementById('sd-go-cart');
+    var servicesCache = null;
+
+    function fetchServices() {
+        if (servicesCache) return Promise.resolve();
+        return fetch('{% url "customer:api_services" %}')
+            .then(function(r){ return r.json(); })
+            .then(function(d){
+                servicesCache = {};
+                d.services.forEach(function(s){ servicesCache[s.id] = s; });
+            });
+    }
 
     function updateCalc() {
+        if (!servicesCache) {
+            return fetchServices().then(updateCalc);
+        }
         var items = Cart.getAll();
-        var pageIds = [];
-        document.querySelectorAll('.sd-table-row').forEach(function(r){ pageIds.push(parseInt(r.dataset.id)); });
 
         var sum = 0;
         var html = '';
         var hasAny = false;
         items.forEach(function(ci) {
-            if (pageIds.indexOf(ci.service_id) === -1) return;
-            var row = document.querySelector('.sd-table-row[data-id="'+ci.service_id+'"]');
-            if (!row) return;
+            var svc = servicesCache[ci.service_id];
+            if (!svc) return;
             hasAny = true;
-            var price = parseFloat(row.dataset.price);
-            var lineTotal = price * ci.qty;
+            var price = parseFloat(svc.price);
+            var qty = ci.qty || 1;
+            var lineTotal = price * qty;
+            if (ci.length && ci.width) {
+                lineTotal = price * ci.length * ci.width * qty;
+            }
+            if (ci.weight) {
+                lineTotal = price * ci.weight * qty;
+            }
             sum += lineTotal;
-            html += '<div class="sd-calc-line"><span>' + row.dataset.name + ' &times; ' + ci.qty + '</span><span>' + Math.round(lineTotal).toLocaleString('ru-RU') + ' ₽</span></div>';
+            html += '<div class="sd-calc-line"><span>' + svc.name + ' × ' + qty + '</span><span>' + Math.round(lineTotal).toLocaleString('ru-RU') + ' ₽</span></div>';
         });
 
         totalEl.textContent = Math.round(sum).toLocaleString('ru-RU') + ' ₽';
@@ -108,13 +136,17 @@
         btn.addEventListener('click', function(){
             var id = parseInt(btn.dataset.id);
             var existing = Cart.get(id);
-            var qty = existing ? existing.qty + 1 : 1;
-            Cart.set({ service_id: id, qty: qty });
+            if (existing) {
+                existing.qty++;
+                Cart.set(existing);
+            } else {
+                Cart.set({ service_id: id, qty: 1 });
+            }
             updateCalc();
         });
     });
 
-    updateCalc();
+    fetchServices().then(updateCalc);
 })();
 </script>
 {% endblock %}

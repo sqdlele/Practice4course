@@ -19,6 +19,7 @@ from django.urls import path, include
 from django.shortcuts import redirect
 from django.conf import settings
 from django.conf.urls.static import static
+from core.views import finance_admin
 
 
 def root_redirect(request):
@@ -26,6 +27,7 @@ def root_redirect(request):
 
 
 urlpatterns = [
+    path('admin/finance/', admin.site.admin_view(finance_admin), name='admin_finance'),
     path('admin/', admin.site.urls),
     path('', root_redirect, name='root'),
     path('staff/', include('core.urls')),
