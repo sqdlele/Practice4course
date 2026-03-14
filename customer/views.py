@@ -171,9 +171,22 @@ def catalog(request):
                     'cat_slug': cat.slug,
                     'svc_pk': svc.pk,
                 })
+    # Предвыбор категории по ?cat=slug или ?cat=pk (с главной)
+    initial_cat_pk = None
+    cat_param = request.GET.get('cat', '').strip()
+    if cat_param:
+        if cat_param.isdigit():
+            if ServiceCategory.objects.filter(pk=int(cat_param)).exists():
+                initial_cat_pk = int(cat_param)
+        else:
+            c = ServiceCategory.objects.filter(slug=cat_param).first()
+            if c:
+                initial_cat_pk = c.pk
+
     return render(request, 'customer/catalog.html', {
         'categories': categories,
         'all_services': all_services,
+        'initial_cat_pk': initial_cat_pk,
     })
 
 

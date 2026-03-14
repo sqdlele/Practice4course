@@ -84,7 +84,7 @@
     var totalEl = document.getElementById('cl-total');
     var calcItems = document.getElementById('cl-calc-items');
     var goCartBtn = document.getElementById('cl-go-cart');
-    var activeCat = 'all';
+    var activeCat = '{% if initial_cat_pk %}{{ initial_cat_pk }}{% else %}all{% endif %}';
     var servicesCache = null;
 
     function applyFilters() {
@@ -109,6 +109,14 @@
             applyFilters();
         });
     });
+
+    {% if initial_cat_pk %}
+    tabs.forEach(function(t){
+        t.classList.remove('active');
+        if (t.dataset.cat === '{{ initial_cat_pk }}') t.classList.add('active');
+    });
+    {% endif %}
+    applyFilters();
 
     searchInput.addEventListener('input', applyFilters);
     searchClear.addEventListener('click', function(){

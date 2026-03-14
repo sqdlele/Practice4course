@@ -116,7 +116,7 @@
     <div class="home-cats">
         {% for cat in categories %}
         <div class="home-cat-block">
-            <a href="{% url 'customer:category' cat.slug %}" class="home-cat-top">
+            <a href="{% url 'customer:catalog' %}?cat={{ cat.slug }}" class="home-cat-top">
                 <h3>{{ cat.name }}</h3>
             </a>
             <div class="home-cat-body">

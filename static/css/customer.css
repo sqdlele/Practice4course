@@ -49,14 +49,15 @@ html, body {
     margin-left: 0;
 }
 
-/* Customer header — apetta-style */
+/* Customer header — закреплён при прокрутке */
 .c-header {
     position: sticky;
     top: 0;
     z-index: 100;
     background: var(--surface);
+    background-color: #fff;
     border-bottom: 1px solid var(--border);
-    box-shadow: 0 1px 0 rgba(0,0,0,.04);
+    box-shadow: 0 1px 3px rgba(0,0,0,.08);
 }
 .c-header-inner {
     max-width: 1200px;
